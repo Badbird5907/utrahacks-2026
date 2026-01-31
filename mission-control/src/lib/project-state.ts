@@ -6,6 +6,7 @@
  * - File tree
  * - Open files and tabs
  * - File watching for external changes
+ * - Persisting project path to localStorage
  */
 
 import { create } from 'zustand';
@@ -15,6 +16,23 @@ import {
   SketchInfo, 
   FileWatchSSEEvent 
 } from './daemon-client';
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const STORAGE_KEY = 'mission-control-project-path';
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Normalize a file path to use forward slashes consistently
+ */
+function normalizePath(path: string): string {
+  return path.replace(/\\/g, '/');
+}
 
 // ============================================================================
 // Types
@@ -66,6 +84,10 @@ interface ProjectState {
   hasUnsavedChanges: (path?: string) => boolean;
   getOpenFile: (path: string) => OpenFile | undefined;
   acknowledgeExternalChange: (path: string) => void;
+  
+  // Persistence
+  restoreFromStorage: () => Promise<void>;
+  getPersistedPath: () => string | null;
 }
 
 // ============================================================================
@@ -128,6 +150,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         externalChanges: new Map(),
       });
 
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, path);
+      }
+
       // Auto-open main file
       if (sketchInfo.mainFile) {
         const mainFilePath = `${path}/${sketchInfo.mainFile}`.replace(/\\/g, '/');
@@ -148,6 +175,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const { watcherAbortController } = get();
     if (watcherAbortController) {
       watcherAbortController.abort();
+    }
+
+    // Clear from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
     }
 
     set({
@@ -179,20 +211,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   // File Operations
   // ==========================================================================
 
-  openFile: async (path: string) => {
+  openFile: async (inputPath: string) => {
+    // Normalize path to use forward slashes consistently
+    const path = normalizePath(inputPath);
     const { openFiles } = get();
     
-    // Check if already open
-    const existing = openFiles.find(f => f.path === path);
+    // Check if already open (also check with normalized paths)
+    const existing = openFiles.find(f => normalizePath(f.path) === path);
     if (existing) {
-      set({ activeFilePath: path });
+      set({ activeFilePath: existing.path });
       return;
     }
 
     const client = getDaemonClient();
     try {
       const result = await client.readFile(path);
-      const name = path.split('/').pop() || path.split('\\').pop() || path;
+      const name = path.split('/').pop() || path;
 
       const newFile: OpenFile = {
         path,
@@ -202,10 +236,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         lastModified: result.lastModified,
       };
 
-      set(state => ({
-        openFiles: [...state.openFiles, newFile],
-        activeFilePath: path,
-      }));
+      set(state => {
+        // Double-check inside set to prevent race conditions
+        if (state.openFiles.some(f => normalizePath(f.path) === path)) {
+          return { activeFilePath: path };
+        }
+        return {
+          openFiles: [...state.openFiles, newFile],
+          activeFilePath: path,
+        };
+      });
     } catch (error: any) {
       console.error('Failed to open file:', error);
       set({ error: error.message });
@@ -356,6 +396,34 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       newChanges.delete(path);
       return { externalChanges: newChanges };
     });
+  },
+
+  // ==========================================================================
+  // Persistence
+  // ==========================================================================
+
+  getPersistedPath: () => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(STORAGE_KEY);
+  },
+
+  restoreFromStorage: async () => {
+    if (typeof window === 'undefined') return;
+    
+    const { sketchPath, openProject } = get();
+    
+    // Don't restore if already have a project open
+    if (sketchPath) return;
+    
+    const storedPath = localStorage.getItem(STORAGE_KEY);
+    if (storedPath) {
+      // Try to open the stored project
+      const success = await openProject(storedPath);
+      if (!success) {
+        // If failed to open, clear the stored path
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
   },
 }));
 

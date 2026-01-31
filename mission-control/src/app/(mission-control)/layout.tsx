@@ -9,11 +9,14 @@ export default function MissionControlLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { status, checkConnection } = useDaemonStore();
+  const status = useDaemonStore((s) => s.status);
+  const checkConnection = useDaemonStore((s) => s.checkConnection);
 
   useEffect(() => {
     checkConnection();
-  }, [checkConnection]);
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showDialog = status === "disconnected" || status === "error";
 

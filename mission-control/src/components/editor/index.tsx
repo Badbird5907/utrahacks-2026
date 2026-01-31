@@ -3,13 +3,16 @@
 import { useEditorStore } from "@/lib/state";
 import { useProjectStore } from "@/lib/project-state";
 import dynamic from "next/dynamic";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { EditorTabs, EditorTabsEmpty } from "@/components/editor-tabs";
 
 const MonacoEditor = dynamic(
   () => import("./monaco").then((mod) => mod.MonacoEditor),
   { ssr: false }
 );
+
+// Auto-save delay in milliseconds
+const AUTO_SAVE_DELAY = 1000;
 
 interface EditorProps {
   onOpenProject?: () => void;
@@ -36,6 +39,10 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
   const saveFile = useProjectStore((s) => s.saveFile);
   const hasUnsavedChanges = useProjectStore((s) => s.hasUnsavedChanges);
   const getOpenFile = useProjectStore((s) => s.getOpenFile);
+
+  // Auto-save timer ref
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSavePathRef = useRef<string | null>(null);
 
   // Get active file
   const activeFile = activeFilePath ? getOpenFile(activeFilePath) : undefined;
@@ -65,7 +72,32 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
     }
   }, [lspClient, activeFilePath, activeFile, openDocument]);
 
-  // Handle code changes
+  // Cleanup auto-save timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Auto-save function
+  const triggerAutoSave = useCallback(
+    async (filePath: string) => {
+      try {
+        // Check if file still has unsaved changes (user might have manually saved)
+        if (hasUnsavedChanges(filePath)) {
+          await saveFile(filePath);
+          notifyDocumentSaved(filePath);
+        }
+      } catch (error) {
+        console.error("Auto-save failed:", error);
+      }
+    },
+    [saveFile, notifyDocumentSaved, hasUnsavedChanges]
+  );
+
+  // Handle code changes with auto-save
   const handleUpdateCode = useCallback(
     (newCode: string) => {
       if (!activeFilePath) return;
@@ -75,13 +107,35 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
 
       // Update in LSP
       updateDocument(activeFilePath, newCode);
+
+      // Clear existing auto-save timer
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+
+      // Set up new auto-save timer
+      pendingSavePathRef.current = activeFilePath;
+      autoSaveTimerRef.current = setTimeout(() => {
+        const pathToSave = pendingSavePathRef.current;
+        if (pathToSave) {
+          triggerAutoSave(pathToSave);
+          pendingSavePathRef.current = null;
+        }
+      }, AUTO_SAVE_DELAY);
     },
-    [activeFilePath, updateFileContent, updateDocument]
+    [activeFilePath, updateFileContent, updateDocument, triggerAutoSave]
   );
 
-  // Handle save (Ctrl+S)
+  // Handle manual save (Ctrl+S) - also clears auto-save timer
   const handleSave = useCallback(async () => {
     if (!activeFilePath) return;
+
+    // Clear auto-save timer since we're saving manually
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+      pendingSavePathRef.current = null;
+    }
 
     try {
       await saveFile(activeFilePath);
@@ -94,10 +148,17 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
   // Handle tab close - also close in LSP
   const handleCloseTab = useCallback(
     (path: string) => {
+      // Save before closing if there are unsaved changes
+      if (hasUnsavedChanges(path)) {
+        saveFile(path).then(() => {
+          notifyDocumentSaved(path);
+        }).catch(console.error);
+      }
+      
       closeFile(path);
       closeDocument(path);
     },
-    [closeFile, closeDocument]
+    [closeFile, closeDocument, hasUnsavedChanges, saveFile, notifyDocumentSaved]
   );
 
   // No project open

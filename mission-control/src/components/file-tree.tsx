@@ -27,8 +27,8 @@ interface FileTreeProps {
   selectedPath: string | null;
   onSelect: (entry: FileEntry) => void;
   onDelete: (entry: FileEntry) => void;
-  onCreateFile: (parentPath: string, fileName: string) => void;
-  onCreateFolder: (parentPath: string, folderName: string) => void;
+  onRequestCreateFile: (parentPath: string) => void;
+  onRequestCreateFolder: (parentPath: string) => void;
   level?: number;
 }
 
@@ -70,8 +70,8 @@ export function FileTree({
   selectedPath,
   onSelect,
   onDelete,
-  onCreateFile,
-  onCreateFolder,
+  onRequestCreateFile,
+  onRequestCreateFolder,
   level = 0,
 }: FileTreeProps) {
   const [isExpanded, setIsExpanded] = useState(level === 0);
@@ -87,23 +87,17 @@ export function FileTree({
   };
 
   const handleNewFile = () => {
-    const fileName = prompt("Enter file name:");
-    if (fileName) {
-      const parentPath = isDirectory
-        ? entry.path
-        : entry.path.split("/").slice(0, -1).join("/");
-      onCreateFile(parentPath, fileName);
-    }
+    const parentPath = isDirectory
+      ? entry.path
+      : entry.path.split("/").slice(0, -1).join("/");
+    onRequestCreateFile(parentPath);
   };
 
   const handleNewFolder = () => {
-    const folderName = prompt("Enter folder name:");
-    if (folderName) {
-      const parentPath = isDirectory
-        ? entry.path
-        : entry.path.split("/").slice(0, -1).join("/");
-      onCreateFolder(parentPath, folderName);
-    }
+    const parentPath = isDirectory
+      ? entry.path
+      : entry.path.split("/").slice(0, -1).join("/");
+    onRequestCreateFolder(parentPath);
   };
 
   return (
@@ -182,8 +176,8 @@ export function FileTree({
               selectedPath={selectedPath}
               onSelect={onSelect}
               onDelete={onDelete}
-              onCreateFile={onCreateFile}
-              onCreateFolder={onCreateFolder}
+              onRequestCreateFile={onRequestCreateFile}
+              onRequestCreateFolder={onRequestCreateFolder}
               level={level + 1}
             />
           ))}

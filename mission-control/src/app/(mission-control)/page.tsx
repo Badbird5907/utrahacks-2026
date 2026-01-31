@@ -1,22 +1,45 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { FolderOpen, Save, Upload, X, AlertTriangle } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { FolderOpen, Save, X, AlertTriangle, Play, Check, Upload } from "lucide-react";
 import { Editor } from "@/components/editor/index";
 import { FileTree, FileTreeHeader } from "@/components/file-tree";
 import { OpenProjectDialog } from "@/components/open-project-dialog";
+import { InputDialog } from "@/components/input-dialog";
+import { CompileOutputPanel } from "@/components/compile-output-panel";
 import { useProjectStore } from "@/lib/project-state";
 import { useEditorStore } from "@/lib/state";
+import { useDaemonStore } from "@/lib/daemon-state";
 import { Button } from "@/components/ui/button";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { FileEntry } from "@/lib/daemon-client";
 
 export default function Home() {
   const [isOpenProjectDialogOpen, setIsOpenProjectDialogOpen] = useState(false);
+  const [showOutputPanel, setShowOutputPanel] = useState(false);
+  
+  // Dialog states for file/folder creation
+  const [newFileDialogOpen, setNewFileDialogOpen] = useState(false);
+  const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
+  const [createParentPath, setCreateParentPath] = useState<string>("");
+  
+  // Delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<FileEntry | null>(null);
 
   // Project state
   const sketchPath = useProjectStore((s) => s.sketchPath);
@@ -31,14 +54,26 @@ export default function Home() {
   const deleteEntry = useProjectStore((s) => s.deleteEntry);
   const closeProject = useProjectStore((s) => s.closeProject);
   const refreshFileTree = useProjectStore((s) => s.refreshFileTree);
-  const saveFile = useProjectStore((s) => s.saveFile);
   const saveAllFiles = useProjectStore((s) => s.saveAllFiles);
   const hasUnsavedChanges = useProjectStore((s) => s.hasUnsavedChanges);
+  const restoreFromStorage = useProjectStore((s) => s.restoreFromStorage);
 
   // Editor state
   const notifyDocumentSaved = useEditorStore((s) => s.notifyDocumentSaved);
   const isLspConnected = useEditorStore((s) => s.isLspConnected);
   const isLspInitializing = useEditorStore((s) => s.isLspInitializing);
+
+  // Daemon/compile state
+  const compileStatus = useDaemonStore((s) => s.compileStatus);
+  const compileSketch = useDaemonStore((s) => s.compileSketch);
+  const uploadSketch = useDaemonStore((s) => s.uploadSketch);
+  const daemonStatus = useDaemonStore((s) => s.status);
+
+  // Restore project from localStorage on mount
+  useEffect(() => {
+    restoreFromStorage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handlers
   const handleSelectFile = useCallback(
@@ -50,44 +85,64 @@ export default function Home() {
     [openFile]
   );
 
-  const handleDeleteEntry = useCallback(
-    async (entry: FileEntry) => {
-      if (confirm(`Are you sure you want to delete "${entry.name}"?`)) {
-        await deleteEntry(entry.path);
+  // Request to create file - opens dialog
+  const handleRequestCreateFile = useCallback((parentPath: string) => {
+    setCreateParentPath(parentPath);
+    setNewFileDialogOpen(true);
+  }, []);
+
+  // Request to create folder - opens dialog
+  const handleRequestCreateFolder = useCallback((parentPath: string) => {
+    setCreateParentPath(parentPath);
+    setNewFolderDialogOpen(true);
+  }, []);
+
+  // Actually create the file
+  const handleCreateFile = useCallback(
+    async (fileName: string) => {
+      if (createParentPath) {
+        await createFile(createParentPath, fileName);
       }
     },
-    [deleteEntry]
+    [createParentPath, createFile]
   );
 
-  const handleCreateFile = useCallback(
-    async (parentPath: string, fileName: string) => {
-      await createFile(parentPath, fileName);
-    },
-    [createFile]
-  );
-
+  // Actually create the folder
   const handleCreateFolder = useCallback(
-    async (parentPath: string, folderName: string) => {
-      await createFolder(parentPath, folderName);
+    async (folderName: string) => {
+      if (createParentPath) {
+        await createFolder(createParentPath, folderName);
+      }
     },
-    [createFolder]
+    [createParentPath, createFolder]
   );
 
-  const handleNewFileAtRoot = useCallback(() => {
-    if (!sketchPath) return;
-    const fileName = prompt("Enter file name:");
-    if (fileName) {
-      createFile(sketchPath, fileName);
+  // Request delete - opens confirmation dialog
+  const handleRequestDelete = useCallback((entry: FileEntry) => {
+    setEntryToDelete(entry);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  // Actually delete the entry
+  const handleConfirmDelete = useCallback(async () => {
+    if (entryToDelete) {
+      await deleteEntry(entryToDelete.path);
+      setEntryToDelete(null);
     }
-  }, [sketchPath, createFile]);
+  }, [entryToDelete, deleteEntry]);
+
+  // Header button handlers
+  const handleNewFileAtRoot = useCallback(() => {
+    if (sketchPath) {
+      handleRequestCreateFile(sketchPath);
+    }
+  }, [sketchPath, handleRequestCreateFile]);
 
   const handleNewFolderAtRoot = useCallback(() => {
-    if (!sketchPath) return;
-    const folderName = prompt("Enter folder name:");
-    if (folderName) {
-      createFolder(sketchPath, folderName);
+    if (sketchPath) {
+      handleRequestCreateFolder(sketchPath);
     }
-  }, [sketchPath, createFolder]);
+  }, [sketchPath, handleRequestCreateFolder]);
 
   const handleSaveAll = useCallback(async () => {
     await saveAllFiles();
@@ -101,6 +156,45 @@ export default function Home() {
   const handleOpenProject = useCallback(() => {
     setIsOpenProjectDialogOpen(true);
   }, []);
+
+  // Compile the sketch
+  const handleCompile = useCallback(async () => {
+    if (!sketchPath) return;
+    
+    // Save all files first
+    await saveAllFiles();
+    const openFiles = useProjectStore.getState().openFiles;
+    for (const file of openFiles) {
+      notifyDocumentSaved(file.path);
+    }
+    
+    // Show output panel and start compile
+    setShowOutputPanel(true);
+    await compileSketch(sketchPath);
+  }, [sketchPath, saveAllFiles, notifyDocumentSaved, compileSketch]);
+
+  // Compile and upload the sketch
+  const handleUpload = useCallback(async () => {
+    if (!sketchPath) return;
+    
+    // Save all files first
+    await saveAllFiles();
+    const openFiles = useProjectStore.getState().openFiles;
+    for (const file of openFiles) {
+      notifyDocumentSaved(file.path);
+    }
+    
+    // Show output panel and start compile + upload
+    setShowOutputPanel(true);
+    await uploadSketch(sketchPath);
+  }, [sketchPath, saveAllFiles, notifyDocumentSaved, uploadSketch]);
+
+  // Show output panel when compile starts
+  useEffect(() => {
+    if (compileStatus === "compiling") {
+      setShowOutputPanel(true);
+    }
+  }, [compileStatus]);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
@@ -149,6 +243,32 @@ export default function Home() {
 
           {sketchPath && (
             <>
+              {/* Verify/Compile button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCompile}
+                disabled={compileStatus === "compiling" || daemonStatus !== "connected"}
+                title={daemonStatus !== "connected" ? "Daemon not connected" : "Verify/Compile sketch"}
+              >
+                <Check className="h-4 w-4 mr-2" />
+                {compileStatus === "compiling" ? "Compiling..." : "Verify"}
+              </Button>
+
+              {/* Upload button - compiles and uploads */}
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleUpload}
+                disabled={compileStatus === "compiling" || daemonStatus !== "connected"}
+                title={daemonStatus !== "connected" ? "Daemon not connected" : "Compile and upload to board"}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {compileStatus === "compiling" ? "Uploading..." : "Upload"}
+              </Button>
+
+              <div className="w-px h-6 bg-border mx-1" />
+
               <Button
                 variant="outline"
                 size="sm"
@@ -195,9 +315,9 @@ export default function Home() {
                   entry={entry}
                   selectedPath={activeFilePath}
                   onSelect={handleSelectFile}
-                  onDelete={handleDeleteEntry}
-                  onCreateFile={handleCreateFile}
-                  onCreateFolder={handleCreateFolder}
+                  onDelete={handleRequestDelete}
+                  onRequestCreateFile={handleRequestCreateFile}
+                  onRequestCreateFolder={handleRequestCreateFolder}
                   level={0}
                 />
               ))}
@@ -206,13 +326,23 @@ export default function Home() {
         )}
 
         {/* Editor area */}
-        <main className="flex-1 min-w-0 overflow-hidden">
-          {isLoading ? (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-muted-foreground">Loading project...</p>
-            </div>
-          ) : (
-            <Editor onOpenProject={handleOpenProject} />
+        <main className="flex-1 min-w-0 overflow-hidden flex flex-col">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {isLoading ? (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-muted-foreground">Loading project...</p>
+              </div>
+            ) : (
+              <Editor onOpenProject={handleOpenProject} />
+            )}
+          </div>
+          
+          {/* Compile Output Panel */}
+          {showOutputPanel && (
+            <CompileOutputPanel
+              className="h-48"
+              onClose={() => setShowOutputPanel(false)}
+            />
           )}
         </main>
       </div>
@@ -230,8 +360,58 @@ export default function Home() {
           {hasUnsavedChanges() && (
             <span className="text-primary">Unsaved changes</span>
           )}
+          <span className={daemonStatus === "connected" ? "text-green-600" : "text-muted-foreground"}>
+            Daemon: {daemonStatus}
+          </span>
         </div>
       </footer>
+
+      {/* New File Dialog */}
+      <InputDialog
+        open={newFileDialogOpen}
+        onOpenChange={setNewFileDialogOpen}
+        title="New File"
+        description="Enter a name for the new file"
+        label="File name"
+        placeholder="example.ino"
+        submitLabel="Create"
+        onSubmit={handleCreateFile}
+      />
+
+      {/* New Folder Dialog */}
+      <InputDialog
+        open={newFolderDialogOpen}
+        onOpenChange={setNewFolderDialogOpen}
+        title="New Folder"
+        description="Enter a name for the new folder"
+        label="Folder name"
+        placeholder="src"
+        submitLabel="Create"
+        onSubmit={handleCreateFolder}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {entryToDelete?.type === "directory" ? "folder" : "file"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{entryToDelete?.name}&quot;?
+              {entryToDelete?.type === "directory" && " This will delete all contents inside it."}
+              {" "}This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

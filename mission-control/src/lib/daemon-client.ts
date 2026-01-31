@@ -39,6 +39,55 @@ export type UploadSSEEvent =
   | { event: 'error'; data: { message: string; exitCode?: number } }
   | { event: 'done'; data: { message: string } };
 
+// SSE Event types for /compile
+export type CompileSSEEvent =
+  | { event: 'start'; data: { message: string; sketchPath: string; fqbn: string } }
+  | { event: 'stdout'; data: { data: string } }
+  | { event: 'stderr'; data: { data: string } }
+  | { event: 'success'; data: { message: string; exitCode: number; outputPath?: string; buildPath?: string; fqbn: string } }
+  | { event: 'error'; data: { message: string; exitCode?: number } }
+  | { event: 'done'; data: { message: string } };
+
+// SSE Event types for /upload-sketch (compile & upload)
+export type UploadSketchSSEEvent =
+  | { event: 'start'; data: { message: string; sketchPath: string; fqbn: string; port: string } }
+  | { event: 'stdout'; data: { data: string } }
+  | { event: 'stderr'; data: { data: string } }
+  | { event: 'success'; data: { message: string; exitCode: number } }
+  | { event: 'error'; data: { message: string; exitCode?: number } }
+  | { event: 'done'; data: { message: string } };
+
+// Compile request
+export interface CompileRequest {
+  sketchPath: string;
+  fqbn?: string;
+  exportBinaries?: boolean;
+}
+
+// Upload sketch request (compile & upload)
+export interface UploadSketchRequest {
+  sketchPath: string;
+  fqbn?: string;
+  port?: string;
+}
+
+// Board types
+export interface BoardInfo {
+  name: string;
+  fqbn: string;
+  platform?: string;
+}
+
+export interface ConnectedBoard {
+  port: {
+    address: string;
+    label?: string;
+    protocol?: string;
+    protocol_label?: string;
+  };
+  matching_boards?: BoardInfo[];
+}
+
 // SSE Event types for /serial
 export type SerialSSEEvent =
   | { event: 'start'; data: { message: string } }
@@ -244,6 +293,94 @@ export class DaemonClient {
     }
 
     yield* parseSSEStream<SerialSSEEvent>(response, signal);
+  }
+
+  // ==========================================================================
+  // Compile Methods
+  // ==========================================================================
+
+  /**
+   * Compile an Arduino sketch
+   * Returns an async generator that yields SSE events
+   */
+  async *compileSketch(
+    request: CompileRequest,
+    signal?: AbortSignal
+  ): AsyncGenerator<CompileSSEEvent> {
+    const response = await fetch(`${this.baseUrl}/compile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+      signal,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Compile failed: ${response.status}`);
+    }
+
+    yield* parseSSEStream<CompileSSEEvent>(response, signal);
+  }
+
+  /**
+   * Compile and upload an Arduino sketch to a connected board
+   * Returns an async generator that yields SSE events
+   */
+  async *uploadSketch(
+    request: UploadSketchRequest,
+    signal?: AbortSignal
+  ): AsyncGenerator<UploadSketchSSEEvent> {
+    const response = await fetch(`${this.baseUrl}/upload-sketch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+      signal,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Upload failed: ${response.status}`);
+    }
+
+    yield* parseSSEStream<UploadSketchSSEEvent>(response, signal);
+  }
+
+  /**
+   * Get list of all available boards
+   */
+  async getBoards(): Promise<{ boards: BoardInfo[] }> {
+    const response = await fetch(`${this.baseUrl}/boards`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Failed to get boards: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get list of connected boards with auto-detected FQBN
+   */
+  async getConnectedBoards(): Promise<ConnectedBoard[]> {
+    const response = await fetch(`${this.baseUrl}/boards/connected`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Failed to get connected boards: ${response.status}`);
+    }
+
+    return response.json();
   }
 
   // ==========================================================================
