@@ -24,6 +24,7 @@
   },
   "include": [
     "next-env.d.ts",
+    "src/lib/webdfu/webusb.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
