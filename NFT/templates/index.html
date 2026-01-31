@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Ultrasonic Spiral Art 🌀</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0a0a14;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        h1 {
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+            color: #888;
+        }
+        #canvas-container {
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+        canvas {
+            background-color: #0a0a14;
+            border-radius: 50%;
+            display: block;
+        }
+        #status {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌀 Live Sensor Art</h1>
+    <div id="canvas-container">
+        <canvas id="artCanvas" width="800" height="800"></canvas>
+    </div>
+    <div id="status">Waiting for data...</div>
+
+    <script>
+        const socket = io();
+        const canvas = document.getElementById('artCanvas');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+        
+        // Configuration
+        const MAX_POINTS = 300; // Reset after this many dots
+        const CENTER_X = canvas.width / 2;
+        const CENTER_Y = canvas.height / 2;
+        const MAX_RADIUS = (Math.min(canvas.width, canvas.height) / 2) - 40;
+        
+        let count = 0;
+        let points = [];
+
+        // Clear initial canvas
+        ctx.fillStyle = "#0a0a14";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        socket.on('connect', () => {
+            statusEl.innerText = "Connected! Wave your hand 👋";
+        });
+
+        socket.on('disconnect', () => {
+            statusEl.innerText = "Disconnected from server 🔌";
+        });
+
+        socket.on('sensor_data', (data) => {
+            const dist = data.distance;
+            statusEl.innerText = `Data: ${dist}cm | Point: ${count}/${MAX_POINTS}`;
+            drawSpiralPoint(dist);
+        });
+
+        function drawSpiralPoint(dist) {
+            // Reset if full
+            if (count >= MAX_POINTS) {
+                // Fade out effect instead of hard clear?
+                // Let's do a hard clear for now to restart the spiral loop
+                ctx.fillStyle = "rgba(10, 10, 20, 0.9)"; // Slight transparency for trail? No, reset.
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                count = 0;
+            }
+
+            // Math identical to Python script
+            // t goes 0 -> 1
+            const t = count / MAX_POINTS;
+            
+            // Angle
+            const angle = count * 0.5;
+            
+            // Radius (Spiral Out)
+            const radius = 10 + (t * MAX_RADIUS);
+            
+            const x = CENTER_X + Math.cos(angle) * radius;
+            const y = CENTER_Y + Math.sin(angle) * radius;
+
+            // Visuals
+            // Size: Closer = Bigger
+            // Clamp dist 0-200
+            const safeDist = Math.max(0, Math.min(200, dist));
+            const size = Math.max(5, 50 - (safeDist / 4));
+
+            // Color
+            const r = Math.max(0, 255 - safeDist);
+            const g = Math.min(255, safeDist * 2);
+            const b = 200;
+            
+            const color = `rgb(${r}, ${g}, ${b})`;
+
+            // Draw Circle
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            
+            // Add a glow
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+            ctx.fill();
+            ctx.shadowBlur = 0; // Reset
+
+            count++;
+        }
+    </script>
+</body>
+</html>
