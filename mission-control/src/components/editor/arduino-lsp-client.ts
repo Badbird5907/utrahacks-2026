@@ -30,6 +30,81 @@ interface OpenDocument {
 }
 
 /**
+ * Represents a text change with range information for incremental sync
+ */
+interface TextChange {
+  range: {
+    start: Position;
+    end: Position;
+  };
+  text: string;
+}
+
+/**
+ * Convert a character offset to a Position (line, character)
+ */
+function offsetToPosition(text: string, offset: number): Position {
+  let line = 0;
+  let character = 0;
+  
+  for (let i = 0; i < offset && i < text.length; i++) {
+    if (text[i] === '\n') {
+      line++;
+      character = 0;
+    } else {
+      character++;
+    }
+  }
+  
+  return { line, character };
+}
+
+/**
+ * Compute incremental text changes between old and new content.
+ * Returns an array of TextChange objects suitable for LSP didChange.
+ * 
+ * This uses a simple diff algorithm that finds the first and last
+ * differing positions and creates a single change spanning that range.
+ */
+function computeTextChanges(oldText: string, newText: string): TextChange[] {
+  if (oldText === newText) {
+    return [];
+  }
+  
+  // Find the first differing character
+  let start = 0;
+  const minLen = Math.min(oldText.length, newText.length);
+  while (start < minLen && oldText[start] === newText[start]) {
+    start++;
+  }
+  
+  // Find the last differing character (from the end)
+  let oldEnd = oldText.length;
+  let newEnd = newText.length;
+  while (
+    oldEnd > start &&
+    newEnd > start &&
+    oldText[oldEnd - 1] === newText[newEnd - 1]
+  ) {
+    oldEnd--;
+    newEnd--;
+  }
+  
+  // Calculate positions
+  const startPos = offsetToPosition(oldText, start);
+  const endPos = offsetToPosition(oldText, oldEnd);
+  const insertedText = newText.slice(start, newEnd);
+  
+  return [{
+    range: {
+      start: startPos,
+      end: endPos,
+    },
+    text: insertedText,
+  }];
+}
+
+/**
  * Convert a file path to a file:// URI
  * Handles both Windows (C:\path) and Unix (/path) paths
  */
@@ -43,6 +118,19 @@ function pathToUri(filePath: string): string {
   }
   
   return `file://${normalized}`;
+}
+
+/**
+ * Normalize a file path to use forward slashes consistently
+ * Also normalizes Windows drive letters to uppercase for consistent comparison
+ */
+function normalizePath(filePath: string): string {
+  let normalized = filePath.replace(/\\/g, '/');
+  // Normalize Windows drive letter to uppercase
+  if (/^[a-zA-Z]:\//.test(normalized)) {
+    normalized = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }
+  return normalized;
 }
 
 /**
@@ -79,11 +167,15 @@ export class ArduinoLspClient extends LspClient<never> {
   private openDocuments = new Map<string, OpenDocument>();  // path -> document
   private sketchPath: string;
   private rootUri: string;
+  
+  // Unique instance ID for debugging
+  private instanceId = Math.random().toString(36).slice(2, 8);
 
   constructor(private wsUrl: string, sketchPath: string) {
     super();
     this.sketchPath = sketchPath;
     this.rootUri = pathToUri(sketchPath);
+    console.log(`[LSP-${this.instanceId}] Created new client for ${sketchPath}`);
   }
 
   public requestNotification(notifications: LspClientNotifications): void {
@@ -93,12 +185,14 @@ export class ArduinoLspClient extends LspClient<never> {
   public async initialize(): Promise<void> {
     if (this.initialized) return;
 
+    console.log(`[LSP-${this.instanceId}] Initializing...`);
     this.notifications.onWaitingForInitialization?.(true);
 
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket(this.wsUrl);
 
       this.ws.onopen = async () => {
+        console.log(`[LSP-${this.instanceId}] WebSocket connected`);
         try {
           // Send initialize request with proper rootUri
           await this.sendRequest("initialize", {
@@ -119,9 +213,10 @@ export class ArduinoLspClient extends LspClient<never> {
                 },
                 publishDiagnostics: { relatedInformation: true },
                 synchronization: {
-                  didSave: true,
+                  dynamicRegistration: false,
                   willSave: false,
                   willSaveWaitUntil: false,
+                  didSave: true,
                 },
               },
               workspace: {
@@ -139,9 +234,11 @@ export class ArduinoLspClient extends LspClient<never> {
           this.sendNotification("initialized", {});
 
           this.initialized = true;
+          console.log(`[LSP-${this.instanceId}] Initialization complete`);
           this.notifications.onWaitingForInitialization?.(false);
           resolve();
         } catch (error) {
+          console.error(`[LSP-${this.instanceId}] Initialization failed:`, error);
           reject(error);
         }
       };
@@ -151,12 +248,13 @@ export class ArduinoLspClient extends LspClient<never> {
       };
 
       this.ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
+        console.error(`[LSP-${this.instanceId}] WebSocket error:`, error);
         this.notifications.onError?.("WebSocket connection error");
         reject(new Error("WebSocket connection failed"));
       };
 
-      this.ws.onclose = () => {
+      this.ws.onclose = (event) => {
+        console.log(`[LSP-${this.instanceId}] WebSocket closed:`, event.code, event.reason);
         this.initialized = false;
         this.openDocuments.clear();
         // Reject all pending requests
@@ -178,6 +276,7 @@ export class ArduinoLspClient extends LspClient<never> {
         if (pending) {
           this.pendingRequests.delete(message.id);
           if (message.error) {
+            console.error(`[LSP-${this.instanceId}] Request error:`, message.error);
             pending.reject(new Error(message.error.message));
           } else {
             pending.resolve(message.result);
@@ -191,7 +290,7 @@ export class ArduinoLspClient extends LspClient<never> {
         this.handleNotification(message.method, message.params);
       }
     } catch (error) {
-      console.error("Failed to parse LSP message:", error);
+      console.error(`[LSP-${this.instanceId}] Failed to parse message:`, error);
     }
   }
 
@@ -201,8 +300,11 @@ export class ArduinoLspClient extends LspClient<never> {
         uri: string;
         diagnostics: Diagnostic[];
       };
+      console.log(`[LSP-${this.instanceId}] Diagnostics for:`, diagnosticParams.uri, 'count:', diagnosticParams.diagnostics.length);
       // Forward diagnostics for any open document
       this.notifications.onDiagnostics?.(diagnosticParams.diagnostics, diagnosticParams.uri);
+    } else {
+      console.log(`[LSP-${this.instanceId}] Notification:`, method);
     }
   }
 
@@ -248,21 +350,29 @@ export class ArduinoLspClient extends LspClient<never> {
    * Open a document in the LSP
    */
   public openDocument(filePath: string, content: string): void {
-    if (!this.initialized) return;
+    if (!this.initialized) {
+      console.warn(`[LSP-${this.instanceId}] Cannot open document - not initialized`);
+      return;
+    }
 
+    // Normalize path for consistent storage
+    const normalizedPath = normalizePath(filePath);
     const uri = pathToUri(filePath);
     
     // Check if already open
-    if (this.openDocuments.has(filePath)) {
+    if (this.openDocuments.has(normalizedPath)) {
+      console.log(`[LSP-${this.instanceId}] Document already open:`, normalizedPath);
       return;
     }
+
+    console.log(`[LSP-${this.instanceId}] Opening document:`, normalizedPath, 'uri:', uri);
 
     const doc: OpenDocument = {
       uri,
       version: 0,
       content,
     };
-    this.openDocuments.set(filePath, doc);
+    this.openDocuments.set(normalizedPath, doc);
 
     this.sendNotification("textDocument/didOpen", {
       textDocument: {
@@ -280,26 +390,44 @@ export class ArduinoLspClient extends LspClient<never> {
   public closeDocument(filePath: string): void {
     if (!this.initialized) return;
 
-    const doc = this.openDocuments.get(filePath);
+    const normalizedPath = normalizePath(filePath);
+    const doc = this.openDocuments.get(normalizedPath);
     if (!doc) return;
+
+    console.log(`[LSP-${this.instanceId}] Closing document:`, normalizedPath);
 
     this.sendNotification("textDocument/didClose", {
       textDocument: { uri: doc.uri },
     });
 
-    this.openDocuments.delete(filePath);
+    this.openDocuments.delete(normalizedPath);
   }
 
   /**
-   * Update document content
+   * Update document content using incremental sync.
+   * The Arduino Language Server requires incremental changes (with range),
+   * not full document replacement.
    */
   public updateDocument(filePath: string, content: string): void {
-    if (!this.initialized) return;
+    if (!this.initialized) {
+      console.warn(`[LSP-${this.instanceId}] Cannot update document - not initialized`);
+      return;
+    }
 
-    const doc = this.openDocuments.get(filePath);
+    const normalizedPath = normalizePath(filePath);
+    const doc = this.openDocuments.get(normalizedPath);
     if (!doc) {
       // Auto-open if not open
+      console.log(`[LSP-${this.instanceId}] Document not open, auto-opening:`, normalizedPath);
       this.openDocument(filePath, content);
+      return;
+    }
+
+    // Compute incremental changes between old and new content
+    const changes = computeTextChanges(doc.content, content);
+    
+    if (changes.length === 0) {
+      // No actual changes, skip the notification
       return;
     }
 
@@ -311,7 +439,7 @@ export class ArduinoLspClient extends LspClient<never> {
         uri: doc.uri,
         version: doc.version,
       },
-      contentChanges: [{ text: content }],
+      contentChanges: changes,
     });
   }
 
@@ -321,7 +449,8 @@ export class ArduinoLspClient extends LspClient<never> {
   public notifyDocumentSaved(filePath: string): void {
     if (!this.initialized) return;
 
-    const doc = this.openDocuments.get(filePath);
+    const normalizedPath = normalizePath(filePath);
+    const doc = this.openDocuments.get(normalizedPath);
     if (!doc) return;
 
     this.sendNotification("textDocument/didSave", {
@@ -357,10 +486,18 @@ export class ArduinoLspClient extends LspClient<never> {
     filePath: string,
     position: Position
   ): Promise<Hover | null> {
-    if (!this.initialized) return null;
+    if (!this.initialized) {
+      console.warn(`[LSP-${this.instanceId}] getHoverInfo - not initialized`);
+      return null;
+    }
 
-    const doc = this.openDocuments.get(filePath);
-    if (!doc) return null;
+    const normalizedPath = normalizePath(filePath);
+    const doc = this.openDocuments.get(normalizedPath);
+    if (!doc) {
+      console.warn(`[LSP-${this.instanceId}] getHoverInfo - document not open:`, normalizedPath);
+      console.log(`[LSP-${this.instanceId}] Open documents:`, Array.from(this.openDocuments.keys()));
+      return null;
+    }
 
     try {
       const result = await this.sendRequest("textDocument/hover", {
@@ -368,7 +505,8 @@ export class ArduinoLspClient extends LspClient<never> {
         position,
       });
       return result as Hover | null;
-    } catch {
+    } catch (error) {
+      console.error(`[LSP-${this.instanceId}] getHoverInfo failed:`, error);
       return null;
     }
   }
@@ -380,8 +518,12 @@ export class ArduinoLspClient extends LspClient<never> {
   ): Promise<WorkspaceEdit | null> {
     if (!this.initialized) return null;
 
-    const doc = this.openDocuments.get(filePath);
-    if (!doc) return null;
+    const normalizedPath = normalizePath(filePath);
+    const doc = this.openDocuments.get(normalizedPath);
+    if (!doc) {
+      console.warn(`[LSP-${this.instanceId}] getRenameEdits - document not open:`, normalizedPath);
+      return null;
+    }
 
     try {
       const result = await this.sendRequest("textDocument/rename", {
@@ -390,7 +532,8 @@ export class ArduinoLspClient extends LspClient<never> {
         newName,
       });
       return result as WorkspaceEdit | null;
-    } catch {
+    } catch (error) {
+      console.error(`[LSP-${this.instanceId}] getRenameEdits failed:`, error);
       return null;
     }
   }
@@ -401,8 +544,12 @@ export class ArduinoLspClient extends LspClient<never> {
   ): Promise<SignatureHelp | null> {
     if (!this.initialized) return null;
 
-    const doc = this.openDocuments.get(filePath);
-    if (!doc) return null;
+    const normalizedPath = normalizePath(filePath);
+    const doc = this.openDocuments.get(normalizedPath);
+    if (!doc) {
+      console.warn(`[LSP-${this.instanceId}] getSignatureHelp - document not open:`, normalizedPath);
+      return null;
+    }
 
     try {
       const result = await this.sendRequest("textDocument/signatureHelp", {
@@ -410,7 +557,8 @@ export class ArduinoLspClient extends LspClient<never> {
         position,
       });
       return result as SignatureHelp | null;
-    } catch {
+    } catch (error) {
+      console.error(`[LSP-${this.instanceId}] getSignatureHelp failed:`, error);
       return null;
     }
   }
@@ -419,39 +567,48 @@ export class ArduinoLspClient extends LspClient<never> {
     filePath: string,
     position: Position
   ): Promise<CompletionList | CompletionItem[] | null> {
-    if (!this.initialized) return null;
+    if (!this.initialized) {
+      console.warn(`[LSP-${this.instanceId}] getCompletion - not initialized`);
+      return null;
+    }
 
-    const doc = this.openDocuments.get(filePath);
-    if (!doc) return null;
+    const normalizedPath = normalizePath(filePath);
+    const doc = this.openDocuments.get(normalizedPath);
+    if (!doc) {
+      console.warn(`[LSP-${this.instanceId}] getCompletion - document not open:`, normalizedPath);
+      console.log(`[LSP-${this.instanceId}] Open documents:`, Array.from(this.openDocuments.keys()));
+      return null;
+    }
 
     try {
+      console.log(`[LSP-${this.instanceId}] Requesting completion at`, position, 'for', doc.uri);
       const result = await this.sendRequest("textDocument/completion", {
         textDocument: { uri: doc.uri },
         position,
       });
+      console.log(`[LSP-${this.instanceId}] Completion result:`, result ? 'received' : 'null');
       return result as CompletionList | CompletionItem[] | null;
-    } catch {
+    } catch (error) {
+      console.error(`[LSP-${this.instanceId}] getCompletion failed:`, error);
       return null;
     }
   }
 
+  /**
+   * Resolve completion item details.
+   * Note: Arduino Language Server does NOT support this method and will panic if called.
+   * We simply return the original item as-is.
+   */
   public async resolveCompletion(
     completionItem: CompletionItem
   ): Promise<CompletionItem | null> {
-    if (!this.initialized) return null;
-
-    try {
-      const result = await this.sendRequest(
-        "completionItem/resolve",
-        completionItem
-      );
-      return result as CompletionItem | null;
-    } catch {
-      return null;
-    }
+    // Arduino LSP doesn't implement completionItem/resolve - it panics with "unimplemented"
+    // Just return the original item without making the LSP call
+    return completionItem;
   }
 
   public disconnect(): void {
+    console.log(`[LSP-${this.instanceId}] Disconnecting...`);
     if (this.ws) {
       // Close all open documents first
       for (const filePath of this.openDocuments.keys()) {
@@ -478,6 +635,7 @@ export class ArduinoLspClient extends LspClient<never> {
   }
 
   public isDocumentOpen(filePath: string): boolean {
-    return this.openDocuments.has(filePath);
+    const normalizedPath = normalizePath(filePath);
+    return this.openDocuments.has(normalizedPath);
   }
 }

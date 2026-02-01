@@ -481,6 +481,27 @@ export class DaemonClient {
   }
 
   /**
+   * Rename a file or directory
+   */
+  async renameEntry(oldPath: string, newPath: string): Promise<{ newPath: string }> {
+    const response = await fetch(`${this.baseUrl}/fs/rename`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ oldPath, newPath }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Failed to rename: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Validate an Arduino sketch directory
    */
   async validateSketch(path: string): Promise<SketchInfo> {

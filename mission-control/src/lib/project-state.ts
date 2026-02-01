@@ -10,6 +10,7 @@
  */
 
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import { 
   getDaemonClient, 
   FileEntry, 
@@ -79,6 +80,7 @@ interface ProjectState {
   createFile: (parentPath: string, name: string) => Promise<void>;
   createFolder: (parentPath: string, name: string) => Promise<void>;
   deleteEntry: (path: string) => Promise<void>;
+  renameEntry: (oldPath: string, newName: string) => Promise<void>;
 
   // Helpers
   hasUnsavedChanges: (path?: string) => boolean;
@@ -248,7 +250,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       });
     } catch (error: any) {
       console.error('Failed to open file:', error);
-      set({ error: error.message });
+      toast.error('Failed to open file', { description: error.message });
     }
   },
 
@@ -306,7 +308,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }));
     } catch (error: any) {
       console.error('Failed to save file:', error);
-      set({ error: error.message });
+      toast.error('Failed to save file', { description: error.message });
       throw error;
     }
   },
@@ -334,7 +336,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       await get().openFile(fullPath);
     } catch (error: any) {
       console.error('Failed to create file:', error);
-      set({ error: error.message });
+      toast.error('Failed to create file', { description: error.message });
       throw error;
     }
   },
@@ -348,27 +350,89 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       await get().refreshFileTree();
     } catch (error: any) {
       console.error('Failed to create folder:', error);
-      set({ error: error.message });
+      toast.error('Failed to create folder', { description: error.message });
       throw error;
     }
   },
 
   deleteEntry: async (path: string) => {
     const client = getDaemonClient();
+    const normalizedPath = normalizePath(path);
 
     try {
       await client.deleteEntry(path);
       
-      // Close if open
+      // Close any open files that match the path or are inside it (for directories)
       const { openFiles } = get();
-      if (openFiles.find(f => f.path === path)) {
-        get().closeFile(path);
+      const filesToClose = openFiles.filter(f => {
+        const normalizedFilePath = normalizePath(f.path);
+        return normalizedFilePath === normalizedPath || normalizedFilePath.startsWith(normalizedPath + '/');
+      });
+      
+      for (const file of filesToClose) {
+        get().closeFile(file.path);
       }
       
       await get().refreshFileTree();
     } catch (error: any) {
       console.error('Failed to delete:', error);
-      set({ error: error.message });
+      toast.error('Failed to delete', { description: error.message });
+      throw error;
+    }
+  },
+
+  renameEntry: async (oldPath: string, newName: string) => {
+    const client = getDaemonClient();
+    // Normalize to forward slashes first, then get parent directory
+    const normalizedOldPath = normalizePath(oldPath);
+    const parentPath = normalizedOldPath.split('/').slice(0, -1).join('/');
+    const newPath = `${parentPath}/${newName}`;
+
+    try {
+      await client.renameEntry(oldPath, newPath);
+      
+      // Update open file paths - handles both direct file rename and files inside renamed directories
+      set(state => {
+        const updatedOpenFiles = state.openFiles.map(f => {
+          const normalizedFilePath = normalizePath(f.path);
+          
+          // Exact match - the renamed item is this file
+          if (normalizedFilePath === normalizedOldPath) {
+            return { ...f, path: newPath, name: newName };
+          }
+          
+          // File is inside a renamed directory
+          if (normalizedFilePath.startsWith(normalizedOldPath + '/')) {
+            const relativePath = normalizedFilePath.slice(normalizedOldPath.length);
+            const updatedPath = newPath + relativePath;
+            return { ...f, path: updatedPath };
+          }
+          
+          return f;
+        });
+        
+        // Update active file path if needed
+        let updatedActiveFilePath = state.activeFilePath;
+        if (state.activeFilePath) {
+          const normalizedActivePath = normalizePath(state.activeFilePath);
+          if (normalizedActivePath === normalizedOldPath) {
+            updatedActiveFilePath = newPath;
+          } else if (normalizedActivePath.startsWith(normalizedOldPath + '/')) {
+            const relativePath = normalizedActivePath.slice(normalizedOldPath.length);
+            updatedActiveFilePath = newPath + relativePath;
+          }
+        }
+        
+        return {
+          openFiles: updatedOpenFiles,
+          activeFilePath: updatedActiveFilePath,
+        };
+      });
+      
+      await get().refreshFileTree();
+    } catch (error: any) {
+      console.error('Failed to rename:', error);
+      toast.error('Failed to rename', { description: error.message });
       throw error;
     }
   },

@@ -11,6 +11,7 @@ import {
   FilePlus,
   FolderPlus,
   RefreshCw,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,9 +28,11 @@ interface FileTreeProps {
   selectedPath: string | null;
   onSelect: (entry: FileEntry) => void;
   onDelete: (entry: FileEntry) => void;
+  onRename: (entry: FileEntry) => void;
   onRequestCreateFile: (parentPath: string) => void;
   onRequestCreateFolder: (parentPath: string) => void;
   level?: number;
+  mainFileName?: string;  // The main .ino file name (e.g., "MySketch.ino")
 }
 
 function getFileIcon(fileName: string) {
@@ -70,13 +73,16 @@ export function FileTree({
   selectedPath,
   onSelect,
   onDelete,
+  onRename,
   onRequestCreateFile,
   onRequestCreateFolder,
   level = 0,
+  mainFileName,
 }: FileTreeProps) {
   const [isExpanded, setIsExpanded] = useState(level === 0);
   const isSelected = selectedPath === entry.path;
   const isDirectory = entry.type === "directory";
+  const isMainFile = mainFileName && entry.name === mainFileName;
 
   const handleClick = () => {
     if (isDirectory) {
@@ -155,14 +161,20 @@ export function FileTree({
               </ContextMenuItem>
             </>
           )}
-          {level > 0 && (
-            <ContextMenuItem
-              onClick={() => onDelete(entry)}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </ContextMenuItem>
+          {!isMainFile && (
+            <>
+              <ContextMenuItem onClick={() => onRename(entry)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Rename
+              </ContextMenuItem>
+              <ContextMenuItem
+                onClick={() => onDelete(entry)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </ContextMenuItem>
+            </>
           )}
         </ContextMenuContent>
       </ContextMenu>
@@ -176,9 +188,11 @@ export function FileTree({
               selectedPath={selectedPath}
               onSelect={onSelect}
               onDelete={onDelete}
+              onRename={onRename}
               onRequestCreateFile={onRequestCreateFile}
               onRequestCreateFolder={onRequestCreateFolder}
               level={level + 1}
+              mainFileName={mainFileName}
             />
           ))}
           {entry.children.length === 0 && (

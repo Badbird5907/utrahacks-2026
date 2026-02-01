@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FolderOpen, AlertCircle, Loader2 } from "lucide-react";
+import { FolderOpen, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useProjectStore } from "@/lib/project-state";
+import { toast } from "sonner";
 
 interface OpenProjectDialogProps {
   trigger?: React.ReactNode;
@@ -31,7 +31,6 @@ export function OpenProjectDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const [sketchPath, setSketchPath] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const openProject = useProjectStore((state) => state.openProject);
 
@@ -41,12 +40,11 @@ export function OpenProjectDialog({
 
   const handleOpen = async () => {
     if (!sketchPath.trim()) {
-      setError("Please enter a sketch path");
+      toast.error("Please enter a sketch path");
       return;
     }
 
     setIsLoading(true);
-    setError(null);
 
     try {
       const success = await openProject(sketchPath.trim());
@@ -56,10 +54,14 @@ export function OpenProjectDialog({
       } else {
         // Error is set in the store
         const storeError = useProjectStore.getState().error;
-        setError(storeError || "Failed to open project");
+        toast.error("Failed to open project", { 
+          description: storeError || "Unknown error" 
+        });
       }
     } catch (err: any) {
-      setError(err.message || "Failed to open project");
+      toast.error("Failed to open project", { 
+        description: err.message || "Unknown error" 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -102,13 +104,6 @@ export function OpenProjectDialog({
               Example: C:\Users\username\Documents\Arduino\Blink
             </p>
           </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
         </div>
 
         <DialogFooter>
