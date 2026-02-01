@@ -88,5 +88,18 @@ for i, dist in enumerate(data):
 
 output_filename = 'spiral_art.png'
 img.save(output_filename)
-img.show()
+# img.show() # Optional: Don't block the script with the image viewer
 print(f"Saved to {output_filename}")
+
+# --- Trigger NFT Minting ---
+import subprocess
+print("\n🔮 Minting NFT on Solana...")
+try:
+    # Check if node is installed
+    subprocess.run(["node", "--version"], check=True, capture_output=True)
+    # Run mint script
+    subprocess.run(["node", "mint.js"], check=True)
+except FileNotFoundError:
+    print("❌ Node.js not found. Please install Node.js to mint NFTs.")
+except subprocess.CalledProcessError as e:
+    print(f"❌ Minting script failed with error: {e}")
