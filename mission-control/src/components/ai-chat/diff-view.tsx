@@ -135,24 +135,24 @@ export function DiffView({ oldContent, newContent, filePath, editId }: DiffViewP
   const removedCount = diffLines.filter((l) => l.type === "remove").length;
 
   return (
-    <div className="rounded-md border text-xs my-2 overflow-hidden bg-muted/30">
+    <div className="rounded-md border text-xs my-2 overflow-hidden bg-muted/30 min-w-0">
       {/* Header */}
-      <div className="flex items-center justify-between bg-muted/50 px-2 py-1 border-b gap-2">
+      <div className="flex items-center justify-between bg-muted/50 px-2 py-1 border-b gap-2 min-w-0">
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-1 min-w-0 hover:bg-muted rounded px-1 py-0.5 -ml-1"
+          className="flex items-center gap-1 min-w-0 hover:bg-muted rounded px-1 py-0.5 -ml-1 flex-1"
         >
           {isExpanded ? (
             <ChevronDown className="h-3 w-3 shrink-0" />
           ) : (
             <ChevronRight className="h-3 w-3 shrink-0" />
           )}
-          <span className="font-medium truncate">{filename}</span>
+          <span className="font-medium truncate min-w-0">{filename}</span>
         </button>
 
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-muted-foreground">
+          <span className="text-muted-foreground whitespace-nowrap">
             <span className="text-green-600 dark:text-green-400">+{addedCount}</span>
             {" / "}
             <span className="text-red-600 dark:text-red-400">-{removedCount}</span>
@@ -164,7 +164,7 @@ export function DiffView({ oldContent, newContent, filePath, editId }: DiffViewP
               size="sm"
               onClick={handleUndo}
               disabled={isUndoing}
-              className="h-6 px-2 text-xs"
+              className="h-6 px-2 text-xs shrink-0"
             >
               <Undo2 className="h-3 w-3 mr-1" />
               {isUndoing ? "..." : "Undo"}
@@ -175,8 +175,8 @@ export function DiffView({ oldContent, newContent, filePath, editId }: DiffViewP
 
       {/* Diff lines */}
       {isExpanded && (
-        <ScrollArea className="max-h-48">
-          <pre className="p-2 text-xs font-mono leading-relaxed">
+        <ScrollArea className="max-w-full">
+          <pre className="p-2 text-xs font-mono leading-relaxed whitespace-pre-wrap break-words min-w-0">
             {collapsedLines.map((line, i) => {
               if ("count" in line) {
                 return (
@@ -193,21 +193,21 @@ export function DiffView({ oldContent, newContent, filePath, editId }: DiffViewP
                 <div
                   key={i}
                   className={cn(
-                    "px-1 -mx-1",
+                    "px-1 -mx-1 break-words",
                     line.type === "add" &&
                       "bg-green-500/15 text-green-700 dark:text-green-400",
                     line.type === "remove" &&
                       "bg-red-500/15 text-red-700 dark:text-red-400"
                   )}
                 >
-                  <span className="select-none opacity-50 w-4 inline-block">
+                  <span className="select-none opacity-50 w-4 inline-block shrink-0">
                     {line.type === "add"
                       ? "+"
                       : line.type === "remove"
                       ? "-"
                       : " "}
                   </span>
-                  {line.text || " "}
+                  <span className="break-words">{line.text || " "}</span>
                 </div>
               );
             })}

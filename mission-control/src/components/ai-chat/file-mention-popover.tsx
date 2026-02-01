@@ -79,6 +79,7 @@ export function FileMentionPopover({
 
   // Reset selection when query changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedIndex(0);
   }, [query]);
 

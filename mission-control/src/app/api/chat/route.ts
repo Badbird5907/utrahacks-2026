@@ -15,12 +15,32 @@ Your capabilities:
 4. Edit files when the user asks you to make changes
 
 When editing files:
-- Use the editFile tool to make changes
+- Use the editFile tool with a unified diff patch to make changes
 - Use the listFiles tool to list the files in the project (use "./" for the project root)
-- Be precise with the oldContent parameter - it must exactly match existing code
-- Make minimal, focused changes
-- Explain what you changed and why
+- Use the readFile tool to read files not already in context
 - Always use relative paths (e.g., "./sketch.ino", "./lib/helpers.h")
+
+## Unified Diff Format
+
+When using editFile, generate a standard unified diff patch:
+
+\`\`\`
+--- a/filename
++++ b/filename
+@@ -start,count +start,count @@
+ context line (unchanged, prefix with single space)
+-removed line (prefix with -)
++added line (prefix with +)
+ context line
+\`\`\`
+
+Important diff rules:
+- Include at least 3 lines of context around each change
+- Context lines MUST match the actual file content exactly
+- Use a single space prefix for unchanged context lines
+- The line numbers in @@ don't need to be perfect - focus on correct context
+- One file per editFile call - use multiple calls for multiple files
+- Make minimal, focused changes
 
 When users @mention files, their contents are provided as context with relative paths. Use these relative paths when referencing or editing files.
 
@@ -56,16 +76,23 @@ export async function POST(req: Request) {
     const systemPrompt = buildSystemPrompt(fileContents);
 
     const result = streamText({
-      model: google('gemini-2.5-flash-preview-09-2025'),
+      model: google('gemini-3-pro-preview'),
       system: systemPrompt,
       messages: await convertToModelMessages(messages),
+      providerOptions: {
+        google: {
+          thinkingConfig: {
+            thinkingLevel: 'low', // for demo reasons
+            includeThoughts: true,
+          }
+        }
+      },
       tools: {
         editFile: tool({
-          description: 'Edit a file by finding and replacing content. Use this when the user asks you to modify, fix, or update code in a file. The file must be @mentioned in the conversation to have its content available.',
+          description: 'Edit a file by providing a unified diff patch. Generate a standard unified diff format showing the changes to make. Include 3+ lines of context for reliable matching. The patch will be applied by a specialized model that can handle minor context variations.',
           inputSchema: z.object({
             filePath: z.string().describe('The relative path of the file to edit (e.g., "./sketch.ino", "./lib/helpers.h")'),
-            oldContent: z.string().describe('The exact content to find and replace. Must match exactly including whitespace and newlines.'),
-            newContent: z.string().describe('The new content to replace the old content with'),
+            patch: z.string().describe('A unified diff patch starting with --- a/filename and +++ b/filename, followed by hunks with @@ line markers. Include context lines (prefixed with space), removed lines (prefixed with -), and added lines (prefixed with +).'),
             description: z.string().describe('A brief description of what this edit does'),
           }),
           // No execute function - this is a client-side tool

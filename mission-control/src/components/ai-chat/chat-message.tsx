@@ -4,7 +4,13 @@ import { memo } from "react";
 import { FileText, FolderOpen, Pencil, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DiffView } from "./diff-view";
+import { useAIChatStore } from "@/lib/ai-chat-state";
 import type { UIMessage } from "ai";
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@/components/ai-elements/reasoning";
 
 // Simple markdown-ish rendering for code blocks
 function renderTextContent(text: string): React.ReactNode {
@@ -101,6 +107,7 @@ interface ToolPartProps {
 }
 
 function EditToolPart({ part }: ToolPartProps) {
+  const getEdit = useAIChatStore((s) => s.getEdit);
   const filename = part.input?.filePath?.split("/").pop() || "file";
 
   if (part.state === "partial-call" || part.state === "call" || part.state === "input-streaming" || part.state === "input-available") {
@@ -123,6 +130,19 @@ function EditToolPart({ part }: ToolPartProps) {
 
   // output-available
   if (part.output && part.input) {
+    // Get the edit details from the store
+    const edit = part.output.editId ? getEdit(part.output.editId) : undefined;
+    
+    if (!edit) {
+      // Fallback if edit not found
+      return (
+        <div className="text-xs text-muted-foreground flex items-center gap-1.5 py-1">
+          <Pencil className="h-3 w-3" />
+          Edited <code className="bg-muted px-1 rounded">{filename}</code>
+        </div>
+      );
+    }
+
     return (
       <div className="my-1">
         <div className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1">
@@ -130,8 +150,8 @@ function EditToolPart({ part }: ToolPartProps) {
           Edited <code className="bg-muted px-1 rounded">{filename}</code>
         </div>
         <DiffView
-          oldContent={part.input.oldContent}
-          newContent={part.input.newContent}
+          oldContent={edit.previousContent}
+          newContent={edit.newContent}
           filePath={part.input.filePath}
           editId={part.output.editId}
         />
@@ -185,7 +205,7 @@ function ListFilesToolPart({ part }: ToolPartProps) {
 
   if (part.state === "output-error") {
     return (
-      <div className="text-xs text-destructive flex items-center gap-1.5 py-1">
+      <div className="text-xs text-muted-foreground flex items-center gap-1.5 py-1">
         <AlertCircle className="h-3 w-3" />
         Failed to list files
       </div>
@@ -200,11 +220,33 @@ function ListFilesToolPart({ part }: ToolPartProps) {
   );
 }
 
-interface ChatMessageProps {
-  message: UIMessage;
+// Type for reasoning parts from the AI SDK
+interface ReasoningPartLike {
+  reasoning: string;
 }
 
-export const ChatMessage = memo(function ChatMessage({ message }: ChatMessageProps) {
+interface ReasoningPartProps {
+  part: ReasoningPartLike;
+  isStreaming: boolean;
+}
+
+function ReasoningPart({ part, isStreaming }: ReasoningPartProps) {
+  if (!part.reasoning) return null;
+
+  return (
+    <Reasoning isStreaming={isStreaming}>
+      <ReasoningTrigger />
+      <ReasoningContent>{part.reasoning}</ReasoningContent>
+    </Reasoning>
+  );
+}
+
+interface ChatMessageProps {
+  message: UIMessage;
+  isStreaming?: boolean;
+}
+
+export const ChatMessage = memo(function ChatMessage({ message, isStreaming = false }: ChatMessageProps) {
   const isUser = message.role === "user";
 
   return (
@@ -216,13 +258,19 @@ export const ChatMessage = memo(function ChatMessage({ message }: ChatMessagePro
     >
       <div
         className={cn(
-          "max-w-[90%] text-sm",
+          "w-full text-sm",
           isUser && "bg-muted rounded-2xl px-3 py-2"
         )}
       >
         {message.parts.map((part, index) => {
           const key = `${message.id}-part-${index}`;
           const partType = part.type;
+
+          // Handle reasoning parts
+          if (partType === "reasoning") {
+            const reasoningPart = part as unknown as ReasoningPartLike;
+            return <ReasoningPart key={key} part={reasoningPart} isStreaming={isStreaming} />;
+          }
 
           // Handle text parts
           if (partType === "text") {
