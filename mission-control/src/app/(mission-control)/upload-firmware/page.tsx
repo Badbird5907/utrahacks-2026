@@ -18,7 +18,6 @@ import {
   XCircle,
   RefreshCw,
   ArrowLeft,
-  Usb,
 } from "lucide-react";
 import Link from "next/link";
 

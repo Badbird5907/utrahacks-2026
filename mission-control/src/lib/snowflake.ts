@@ -4,7 +4,7 @@ import snowflake from "snowflake-sdk";
 // Configure Snowflake SDK globally
 snowflake.configure({ 
   logLevel: "ERROR",
-  insecureConnect: false,
+  // insecureConnect: false,
   // Disable OCSP checks which can hang on some networks
   ocspFailOpen: true,
 });
@@ -67,9 +67,9 @@ function createConnection(): snowflake.Connection {
     clientSessionKeepAlive: false,
     validateDefaultParameters: false,
     // OCSP settings - disable for faster connection
-    ocspMode: snowflake.ocspModes.FAIL_OPEN,
+    // ocspMode: snowflake.ocspModes.FAIL_OPEN,
     // Disable browser timeout that can cause hangs
-    browserResponseTimeout: 30000,
+    // browserResponseTimeout: 30000,
   });
 }
 
@@ -134,7 +134,7 @@ function destroy(connection: snowflake.Connection): Promise<void> {
         }
         resolve();
       });
-    } catch (e) {
+    } catch {
       // Catch synchronous errors (e.g., already destroyed)
       console.warn('[Snowflake] Connection already destroyed');
       resolve();

@@ -44,6 +44,9 @@ model Runs {
   // Issues and observations
   technicalIssues String? // Any hardware/software issues during run
 
+  // Solana NFT tracking
+  solanaMintAddress String? // Solana NFT mint address (null if not minted yet)
+
   metadata Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

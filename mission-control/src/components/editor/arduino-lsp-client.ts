@@ -417,12 +417,12 @@ export class ArduinoLspClient extends LspClient<never> {
     });
   }
 
-  public updateCode(code: string): void {
+  public updateCode(_code: string): void {
     // Legacy method - no-op, use updateDocument instead
     console.warn('updateCode is deprecated, use updateDocument instead');
   }
 
-  public async updateTextDocument(code: string): Promise<number> {
+  public async updateTextDocument(_code: string): Promise<number> {
     // Legacy method - no-op, use updateDocument instead
     console.warn('updateTextDocument is deprecated, use updateDocument instead');
     return 0;

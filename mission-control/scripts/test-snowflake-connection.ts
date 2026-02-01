@@ -71,7 +71,7 @@ console.log("4. Attempting to connect to Snowflake...");
 console.log("   (This may take 10-30 seconds)");
 console.log("   URL: https://" + cleanAccount + ".snowflakecomputing.com\n");
 
-connection.connect((err, conn) => {
+connection.connect((err, _conn) => {
   if (err) {
     console.error("❌ Connection failed!\n");
     console.error("Error details:");
@@ -142,7 +142,7 @@ connection.connect((err, conn) => {
             console.log(`✅ Schema ${database}.${schema} exists`);
             if (rows2 && rows2.length > 0) {
               console.log(`   Found ${rows2.length} table(s):`);
-              rows2.forEach((row: any) => {
+              rows2.forEach((row: { name?: string }) => {
                 console.log(`   - ${row.name}`);
               });
             } else {

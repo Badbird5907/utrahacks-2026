@@ -531,9 +531,3 @@ function getRegisteredModel(
 ): RegisteredModel | undefined {
   return registeredModels.find((m) => m.model === model);
 }
-
-function getLspClientForModel(
-  model: monaco.editor.ITextModel,
-): LspClient<never> | undefined {
-  return registeredModels.find((m) => m.model === model)?.lspClient;
-}

@@ -204,7 +204,7 @@ const connection = snowflake.createConnection({
 // Execute statements sequentially
 async function executeStatements() {
   return new Promise<void>((resolve, reject) => {
-    connection.connect(async (err, conn) => {
+    connection.connect(async (err, _conn) => {
       if (err) {
         reject(new Error(`Connection failed: ${err.message}`));
         return;
@@ -223,7 +223,7 @@ async function executeStatements() {
           await new Promise<void>((res, rej) => {
             connection.execute({
               sqlText: sql,
-              complete: (err2, stmt, rows) => {
+              complete: (err2, _stmt, _rows) => {
                 if (err2) {
                   rej(err2);
                 } else {
@@ -234,9 +234,10 @@ async function executeStatements() {
           });
           console.log(`✅ ${i + 1}/${sqlStatements.length}: ${name}`);
           success++;
-        } catch (e: any) {
+        } catch (e) {
+          const error = e as { message?: string };
           console.error(`❌ ${i + 1}/${sqlStatements.length}: ${name}`);
-          console.error(`   Error: ${e.message}\n`);
+          console.error(`   Error: ${error.message || 'Unknown error'}\n`);
           failed++;
           
           // Continue with other statements even if one fails
@@ -252,22 +253,22 @@ async function executeStatements() {
       
       connection.execute({
         sqlText: "SHOW TABLES IN SCHEMA MISSION_CONTROL.RUNS",
-        complete: (err3, stmt, rows) => {
+        complete: (err3, _stmt, rows) => {
           if (err3) {
             console.error("❌ Could not verify tables:", err3.message);
           } else {
             console.log(`📋 Tables found: ${rows?.length || 0}`);
-            rows?.forEach((row: any) => console.log(`   - ${row.name}`));
+            rows?.forEach((row: { name?: string }) => console.log(`   - ${row.name}`));
           }
 
           connection.execute({
             sqlText: "SHOW VIEWS IN SCHEMA MISSION_CONTROL.RUNS",
-            complete: (err4, stmt2, rows2) => {
+            complete: (err4, _stmt2, rows2) => {
               if (err4) {
                 console.error("❌ Could not verify views:", err4.message);
               } else {
                 console.log(`📊 Views found: ${rows2?.length || 0}`);
-                rows2?.forEach((row: any) => console.log(`   - ${row.name}`));
+                rows2?.forEach((row: { name?: string }) => console.log(`   - ${row.name}`));
               }
 
               console.log("\n====================================");

@@ -14,8 +14,7 @@ import { toast } from 'sonner';
 import { 
   getDaemonClient, 
   FileEntry, 
-  SketchInfo, 
-  FileWatchSSEEvent 
+  SketchInfo 
 } from './daemon-client';
 
 const STORAGE_KEY = 'mission-control-project-path';

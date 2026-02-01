@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Trash2, Loader2, StopCircle, Trophy } from "lucide-react";
+import { Trash2, Loader2, Trophy } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { Button } from "@/components/ui/button";

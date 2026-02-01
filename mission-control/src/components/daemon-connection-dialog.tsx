@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { AlertCircle, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { AlertCircle, RefreshCw, WifiOff } from "lucide-react";
 
 interface DaemonConnectionDialogProps {
   open: boolean;
