@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { FileText, FolderOpen, Pencil, AlertCircle, Loader2, CheckCircle, Upload } from "lucide-react";
+import { FileText, FolderOpen, Pencil, AlertCircle, Loader2, CheckCircle, Upload, Terminal, TrendingUp, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DiffView } from "./diff-view";
 import { useAIChatStore } from "@/lib/ai-chat-state";
@@ -372,6 +372,110 @@ function UploadSketchToolPart({ part }: ToolPartProps) {
   );
 }
 
+function ReadSerialLogsToolPart({ part }: ToolPartProps) {
+  const limit = part.input?.limit || 50;
+
+  if (part.state === "partial-call" || part.state === "call" || part.state === "input-streaming" || part.state === "input-available") {
+    return (
+      <div className="text-xs text-muted-foreground flex items-center gap-1.5 py-1">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Reading serial logs...
+      </div>
+    );
+  }
+
+  if (part.state === "output-error") {
+    return (
+      <div className="text-xs text-destructive flex items-center gap-1.5 py-1">
+        <AlertCircle className="h-3 w-3" />
+        Failed to read serial logs: {part.errorText}
+      </div>
+    );
+  }
+
+  // output-available
+  return (
+    <div className="text-xs text-muted-foreground flex items-center gap-1.5 py-1">
+      <Terminal className="h-3 w-3" />
+      Read {limit} serial log lines
+    </div>
+  );
+}
+
+function GetRunsToolPart({ part }: ToolPartProps) {
+  const limit = part.input?.limit || 10;
+
+  if (part.state === "partial-call" || part.state === "call" || part.state === "input-streaming" || part.state === "input-available") {
+    return (
+      <div className="text-xs text-muted-foreground flex items-center gap-1.5 py-1">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Fetching competition runs...
+      </div>
+    );
+  }
+
+  if (part.state === "output-error") {
+    return (
+      <div className="text-xs text-destructive flex items-center gap-1.5 py-1">
+        <AlertCircle className="h-3 w-3" />
+        Failed to fetch runs: {part.errorText}
+      </div>
+    );
+  }
+
+  // output-available
+  const totalRuns = part.output?.totalRuns || 0;
+  return (
+    <div className="text-xs text-muted-foreground flex items-center gap-1.5 py-1">
+      <TrendingUp className="h-3 w-3" />
+      Analyzed {totalRuns} competition run{totalRuns !== 1 ? 's' : ''} (limit: {limit})
+    </div>
+  );
+}
+
+function QuerySnowflakeToolPart({ part }: ToolPartProps) {
+  const explanation = part.input?.explanation;
+
+  if (part.state === "partial-call" || part.state === "call" || part.state === "input-streaming" || part.state === "input-available") {
+    return (
+      <div className="text-xs text-muted-foreground flex items-center gap-1.5 py-1">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Querying analytics database...
+      </div>
+    );
+  }
+
+  if (part.state === "output-error") {
+    return (
+      <div className="text-xs text-destructive flex items-center gap-1.5 py-1">
+        <AlertCircle className="h-3 w-3" />
+        Query failed: {part.errorText}
+      </div>
+    );
+  }
+
+  // output-available
+  if (part.output?.success === false) {
+    return (
+      <div className="text-xs text-destructive flex items-center gap-1.5 py-1">
+        <AlertCircle className="h-3 w-3" />
+        {part.output.error || "Query failed"}
+      </div>
+    );
+  }
+
+  const rowCount = part.output?.rowCount || 0;
+  const executionTime = part.output?.executionTimeMs;
+  
+  return (
+    <div className="text-xs text-muted-foreground flex items-center gap-1.5 py-1">
+      <Database className="h-3 w-3" />
+      {explanation || "Query executed"}: {rowCount} row{rowCount !== 1 ? 's' : ''}
+      {executionTime && ` (${executionTime}ms)`}
+    </div>
+  );
+}
+
 interface ReasoningPartLike {
   text: string;
 }
@@ -471,6 +575,15 @@ export const ChatMessage = memo(function ChatMessage({ message, isStreaming = fa
             }
             if (toolName === "uploadSketch") {
               return <UploadSketchToolPart key={key} part={toolPart} />;
+            }
+            if (toolName === "readSerialLogs") {
+              return <ReadSerialLogsToolPart key={key} part={toolPart} />;
+            }
+            if (toolName === "getRuns") {
+              return <GetRunsToolPart key={key} part={toolPart} />;
+            }
+            if (toolName === "querySnowflake") {
+              return <QuerySnowflakeToolPart key={key} part={toolPart} />;
             }
             return null;
           }

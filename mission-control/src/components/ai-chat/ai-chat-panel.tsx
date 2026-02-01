@@ -149,16 +149,16 @@ export function AIChatPanel() {
           {messages.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-muted-foreground">
-                Ask me about your Arduino code!
+                Ask me anythingx!
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Use @ to mention files for context
               </p>
-              {sketchPath && (
+              {/* {sketchPath && (
                 <p className="text-xs text-muted-foreground mt-3 font-mono bg-muted px-2 py-1 rounded inline-block">
                   {sketchPath.split("/").pop()}
                 </p>
-              )}
+              )} */}
             </div>
           ) : (
             messages.map((message, index) => (

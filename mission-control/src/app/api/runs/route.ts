@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { insertRun as insertRunToSnowflake, isConfigured as isSnowflakeConfigured } from "@/lib/snowflake";
 
 const CreateRunSchema = z.object({
   startTimestamp: z.string().datetime(),
@@ -96,6 +97,34 @@ export async function POST(req: Request): Promise<Response> {
         metadata,
       },
     });
+
+    // Push to Snowflake asynchronously (fire-and-forget)
+    // This won't block the response or fail the request if Snowflake is unavailable
+    if (isSnowflakeConfigured()) {
+      insertRunToSnowflake({
+        id: run.id,
+        number: run.number,
+        startTimestamp: run.startTimestamp,
+        endTimestamp: run.endTimestamp,
+        score: run.score,
+        codeHash: run.codeHash,
+        notes: run.notes,
+        sectionsAttempted: run.sectionsAttempted,
+        rampType: run.rampType,
+        reachedTargetCenter: run.reachedTargetCenter,
+        ballLandingZone: run.ballLandingZone,
+        ballHitWall: run.ballHitWall,
+        obstacleCompleted: run.obstacleCompleted,
+        obstacleIssues: run.obstacleIssues,
+        returnedToStart: run.returnedToStart,
+        boxPickupSuccess: run.boxPickupSuccess,
+        pathUnlocked: run.pathUnlocked,
+        technicalIssues: run.technicalIssues,
+      }).catch((err) => {
+        // Log but don't fail - Snowflake insert is best-effort
+        console.error("[Snowflake] Background insert failed:", err);
+      });
+    }
 
     return Response.json({ success: true, data: run });
   } catch (error: unknown) {

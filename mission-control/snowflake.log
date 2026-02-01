@@ -1,0 +1,157 @@
+{"level":"ERROR","message":"[7:45:48.128 AM]: Connection[id: 1cf6713f-e251-40a6-a81b-bcc28f19cbc0] - connection failed after 64430.41 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:46:26.998 AM]: Connection[id: 99663101-3e29-4743-8b4e-ede420d6fce0] - connection failed after 99597.17 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:46:29.586 AM]: Connection[id: feae7309-f461-414b-8731-985e4d8d3d6e] - connection failed after 97967.16 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:46:45.890 AM]: Connection[id: 6bd9fa72-b9b5-41ea-81a1-b209090c97d6] - connection failed after 128529.27 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:46:46.958 AM]: Connection[id: 9b317c0d-77e5-49f3-9784-a8b0659510c4] - connection failed after 116893.55 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:46:49.061 AM]: Connection[id: 526d3524-cb82-4d9c-bf77-530f47eae237] - connection failed after 123456.48 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:06.205 AM]: Connection[id: c96e26d2-2c6d-4f80-8b3b-df233f0d8618] - connection failed after 139230.71 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:06.918 AM]: Connection[id: 33b7ac33-7af0-4cce-9e14-48bb0f0b121f] - connection failed after 139024.22 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:08.659 AM]: Connection[id: a335093a-581b-4d72-8317-b8c2640de09b] - connection failed after 150461.37 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:12.418 AM]: Connection[id: 36916e20-d0bc-443f-b043-06d18321d8f3] - connection failed after 147710.87 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:16.998 AM]: Connection[id: 7f056e51-33f2-48e8-910b-9c9f1cee12b1] - connection failed after 157892.05 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:24.484 AM]: Connection[id: 2d3a90f0-b914-42c7-b944-499ab1c54f7e] - connection failed after 161752.24 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:26.727 AM]: Connection[id: 7ac055ca-b33d-45bc-8174-065cde7a1fa9] - connection failed after 166741.27 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:27.964 AM]: Connection[id: b7892f3f-b625-4a99-b18f-dbd130ececae] - connection failed after 170883.94 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:29.066 AM]: Connection[id: 3e0bea33-2223-4e19-a10f-33f09be2fe98] - connection failed after 164784.44 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:44.119 AM]: Connection[id: 6191d424-7c24-40c3-8c6b-ba0072b92cf0] - connection failed after 183254.81 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:50.516 AM]: Connection[id: 64df1f3e-cc6f-4d7f-a449-a15555936005] - connection failed after 189289.09 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:51.149 AM]: Connection[id: 7dee6f8a-4458-43d9-b59d-d132995372f9] - connection failed after 190668.65 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:55.264 AM]: Connection[id: e6e632fc-b0e3-4ef5-aabe-c028955546bc] - connection failed after 193487.53 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:55.381 AM]: Connection[id: 49ba0a69-702f-4638-acee-0c9832c02427] - connection failed after 190338.25 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:56.303 AM]: Connection[id: 08ee3ef5-9e13-4b00-a6dd-8d78987771a9] - connection failed after 196836.37 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:47:59.798 AM]: Connection[id: 4b4f8583-cbc2-477f-9d98-ce350cdef702] - connection failed after 188736.73 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:48:04.331 AM]: Connection[id: 0df9a29f-9982-44db-868a-1ccd268492a4] - connection failed after 205650.93 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:48:05.157 AM]: Connection[id: 4a34e1ab-39b4-43e0-bd7f-429ace2084ae] - connection failed after 195768.93 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:48:07.769 AM]: Connection[id: ed8c73bf-27b8-4c77-959e-d7939c0231e3] - connection failed after 205550.18 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:48:15.052 AM]: Connection[id: e87a6dde-16fa-4607-95ba-b407d593f452] - connection failed after 208760.62 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:48:16.237 AM]: Connection[id: 8ccdc8e4-3558-4abf-ae2c-29f2b88c5c00] - connection failed after 207234.81 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:48:17.431 AM]: Connection[id: 4c7bdeb3-6ef0-4c32-bb50-aa227291e4ea] - connection failed after 214210.76 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:48:29.008 AM]: Connection[id: a15e852b-a391-4f56-a552-bf291c7f4b47] - connection failed after 223095.61 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:48:29.568 AM]: Connection[id: c437b1e2-dc86-49ec-89a8-c6cfe635d4bd] - connection failed after 221133.36 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:51:08.967 AM]: Connection[id: 6df7de96-1cf0-4dba-8682-181c28bd2943] - connection failed after 78999.81 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:51:22.669 AM]: Connection[id: 2512fca5-f0a8-4f1b-99ff-4623e5a1d9a2] - connection failed after 106006.27 milliseconds. Error: Request to Snowflake failed."}
+{"level":"INFO","message":"[7:51:32.246 AM]: Creating new connection object"}
+{"level":"INFO","message":"[7:51:32.309 AM]: Creating Connection[id: c54aa534-cb35-4018-ac20-bebbdab25b44] with host: tm57297.snowflakecomputing.com, account: tm57297, accessUrl: https://tm57297.snowflakecomputing.com, user: evan, role: undefined, database: MISSION_CONTROL, schema: RUNS, warehouse: COMPUTE_WH, proxy was not configured, password is provided, region: undefined, authenticator: SNOWFLAKE, ocsp mode: FAIL_OPEN, os: win32, os version: 10.0.26100"}
+{"level":"INFO","message":"[7:51:32.315 AM]: Connection[id: c54aa534-cb35-4018-ac20-bebbdab25b44] additional details: passcode in password is provided, passcode is not provided, private key is not provided, application: MissionControlTest, client name: snowflake-sdk, client version: 2.3.3, retry timeout: 300, private key path: undefined, private key pass is not provided, client store temporary credential: false, browser response timeout: 120000"}
+{"level":"INFO","message":"[7:51:32.320 AM]: Connection[id: c54aa534-cb35-4018-ac20-bebbdab25b44] - connection object created successfully."}
+{"level":"INFO","message":"[7:51:32.326 AM]: Connection[id: c54aa534-cb35-4018-ac20-bebbdab25b44] - connecting. Associated Snowflake domain: GLOBAL"}
+{"level":"INFO","message":"[7:51:32.333 AM]: Connection[id: c54aa534-cb35-4018-ac20-bebbdab25b44] - authentication successful using: SNOWFLAKE"}
+{"level":"INFO","message":"[7:51:32.335 AM]: Trying to initialize Easy Logging"}
+{"level":"INFO","message":"[7:51:32.364 AM]: No client config detected."}
+{"level":"INFO","message":"[7:51:32.368 AM]: No config file path found. Client config will not be used."}
+{"level":"INFO","message":"[7:51:32.371 AM]: Easy Logging is disabled as no config has been found"}
+{"level":"ERROR","message":"[7:51:37.610 AM]: Connection[id: 31cd988c-3898-4c5c-9178-829081a72010] - connection failed after 116351.37 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:51:38.701 AM]: Connection[id: ded94b52-87d9-422a-b256-6e9332cd0183] - connection failed after 110353.83 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:51:53.119 AM]: Connection[id: 949af49c-230d-426d-8b68-d20f7f0fbc6f] - connection failed after 135157.14 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:51:56.245 AM]: Connection[id: 0c3e691c-7af9-4353-9434-82abb7804eb0] - connection failed after 130121.45 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:51:57.703 AM]: Connection[id: b94ff9cb-5799-40ae-9662-cd78cd970016] - connection failed after 137556.57 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:11.914 AM]: Connection[id: 2968e615-18df-4613-87e9-6a4f5e78a447] - connection failed after 152831.41 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:18.793 AM]: Connection[id: e2d7399d-b0af-49f8-ac1a-13a1ff77ddaf] - connection failed after 160513.92 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:20.974 AM]: Connection[id: 8707f390-5364-4ac5-809f-91a6b20735c8] - connection failed after 160265.7 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:23.024 AM]: Connection[id: 705008a6-2a86-4171-bcb4-5c808fbd5978] - connection failed after 165915.74 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:24.403 AM]: Connection[id: 3045fa97-0fa1-478c-8c70-17ac94fa2c15] - connection failed after 157622.31 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:27.837 AM]: Connection[id: 0ab3e2ee-56ba-4aa3-a308-5bf023c4f863] - connection failed after 170334.53 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:29.322 AM]: Connection[id: ef101633-7987-4941-b67a-57a2ec5e7bf7] - connection failed after 164660 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:44.876 AM]: Connection[id: a2a77994-8354-488d-93a9-12299c405728] - connection failed after 183088.29 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:45.434 AM]: Connection[id: 93f96785-ad11-41ac-9509-d2480d5fc7ef] - connection failed after 182719.57 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:46.187 AM]: Connection[id: 9564d8c2-1815-496c-9317-c2129fc3a4e2] - connection failed after 189930.57 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:46.503 AM]: Connection[id: 3739f4d9-cb9e-4fbd-8db8-7c6d5507e4ed] - connection failed after 170365.04 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:48.692 AM]: Connection[id: c4ee9ed9-7a4b-4628-b577-6d9f6b7869ea] - connection failed after 193227.69 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:53.225 AM]: Connection[id: 03cad7c3-6573-49a8-a0cb-11091e9786b7] - connection failed after 177899.64 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:56.215 AM]: Connection[id: 7ac88aac-aa39-4425-b190-8774ada7ad2f] - connection failed after 196541.22 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:58.918 AM]: Connection[id: 5763b710-20e7-4e12-aedd-d697741452b1] - connection failed after 193394.42 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:52:59.246 AM]: Connection[id: b5b3a1d5-ae20-45da-8212-509e80e72b0e] - connection failed after 184996.98 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:53:03.698 AM]: Connection[id: 963d45c1-e690-4517-888b-68cc16c2a25e] - connection failed after 190563.98 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:53:06.188 AM]: Connection[id: d9f18780-a436-4849-ac4d-f63010f35125] - connection failed after 192438.39 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:53:09.978 AM]: Connection[id: 6b4ce895-8640-4355-b3be-c159313df66d] - connection failed after 202409.31 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:53:10.410 AM]: Connection[id: 939256e7-bcfc-424e-b930-8102ab8f137b] - connection failed after 206631.14 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:53:10.688 AM]: Connection[id: 0c3dc8a1-8e62-44dc-983e-c8b45908bb2b] - connection failed after 198283.86 milliseconds. Error: Request to Snowflake failed."}
+{"level":"INFO","message":"[7:53:21.751 AM]: Creating new connection object"}
+{"level":"INFO","message":"[7:53:21.791 AM]: Creating Connection[id: 17990fd9-b31a-48cc-b53d-b296e9f9abd2] with host: tm57297.snowflakecomputing.com, account: tm57297, accessUrl: https://tm57297.snowflakecomputing.com, user: evan, role: undefined, database: MISSION_CONTROL, schema: RUNS, warehouse: COMPUTE_WH, proxy was not configured, password is provided, region: undefined, authenticator: SNOWFLAKE, ocsp mode: FAIL_OPEN, os: win32, os version: 10.0.26100"}
+{"level":"INFO","message":"[7:53:21.794 AM]: Connection[id: 17990fd9-b31a-48cc-b53d-b296e9f9abd2] additional details: passcode in password is provided, passcode is not provided, private key is not provided, application: MissionControlTest, client name: snowflake-sdk, client version: 2.3.3, retry timeout: 300, private key path: undefined, private key pass is not provided, client store temporary credential: false, browser response timeout: 120000"}
+{"level":"INFO","message":"[7:53:21.798 AM]: Connection[id: 17990fd9-b31a-48cc-b53d-b296e9f9abd2] - connection object created successfully."}
+{"level":"INFO","message":"[7:53:21.801 AM]: Connection[id: 17990fd9-b31a-48cc-b53d-b296e9f9abd2] - connecting. Associated Snowflake domain: GLOBAL"}
+{"level":"INFO","message":"[7:53:21.803 AM]: Connection[id: 17990fd9-b31a-48cc-b53d-b296e9f9abd2] - authentication successful using: SNOWFLAKE"}
+{"level":"INFO","message":"[7:53:21.804 AM]: Trying to initialize Easy Logging"}
+{"level":"INFO","message":"[7:53:21.827 AM]: No client config detected."}
+{"level":"INFO","message":"[7:53:21.830 AM]: No config file path found. Client config will not be used."}
+{"level":"INFO","message":"[7:53:21.832 AM]: Easy Logging is disabled as no config has been found"}
+{"level":"ERROR","message":"[7:53:47.365 AM]: Connection[id: 38d301e1-bbe1-421a-8eb7-6c8d6f3d2567] - connection failed after 248708.91 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:54:23.381 AM]: Connection[id: 21e145bd-dab7-4bc6-a61b-686632aa1cf1] - connection failed after 276212.72 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:57:05.262 AM]: Connection[id: 6a005dc4-723a-451e-a013-4fd54f6e6d1e] - connection failed after 91029.79 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:57:31.612 AM]: Connection[id: 9f23dd4b-7b0c-419b-8bb1-92b94450ab25] - connection failed after 129005.47 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:57:33.126 AM]: Connection[id: c47b8807-8cb1-4ee2-a178-9a6e1751a964] - connection failed after 128594.31 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:57:41.092 AM]: Connection[id: 026f6095-0701-4fca-8a28-810b02d70509] - connection failed after 135389.12 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:57:43.494 AM]: Connection[id: 9333b8d7-7a41-4714-87f5-2e038f12c91e] - connection failed after 131921.14 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:57:46.064 AM]: Connection[id: e3e2871d-2be2-4e60-9bd8-7e0b62c38a3b] - connection failed after 141890.04 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:57:52.697 AM]: Connection[id: aa6b1e39-4bf2-4525-806b-2fe79e7ff39c] - connection failed after 147714.39 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:57:53.160 AM]: Connection[id: 7fd049fb-5ad3-4c76-84d7-e7e0ec02fb88] - connection failed after 149825.17 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:57:55.057 AM]: Connection[id: 66f69b31-7ab6-43e4-995c-3d86694211d2] - connection failed after 146642.59 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:57:56.836 AM]: Connection[id: b6efcc10-e42c-4ca9-b6dc-0b517ac55168] - connection failed after 145816.47 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:07.146 AM]: Connection[id: 450f3648-d52d-49ae-baee-6e38de4fbc2d] - connection failed after 160054.45 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:09.763 AM]: Connection[id: 8d10221c-faaa-4033-8f2e-417ac509b437] - connection failed after 157025.58 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:14.567 AM]: Connection[id: 7b8cc8ea-216d-4822-9e83-9bd2fc888546] - connection failed after 169213.93 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:17.236 AM]: Connection[id: 97f5d53b-bb79-466a-8395-6ce91c40ded0] - connection failed after 170960.32 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:18.877 AM]: Connection[id: c9aaa7fe-b95b-4cf4-b84f-ede0e1e2357e] - connection failed after 176827.98 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:20.267 AM]: Connection[id: 499bd321-e4f5-4260-a221-1451bd369abd] - connection failed after 166735.87 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:21.225 AM]: Connection[id: 2118d0f9-c9d9-4b84-98d8-771b97188946] - connection failed after 175214.23 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:24.532 AM]: Connection[id: 671a6cd3-b049-4e18-9289-e308f07a56c5] - connection failed after 169604.63 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:28.889 AM]: Connection[id: da68619e-fdde-4c62-8a4d-cfb09a8e5e29] - connection failed after 179015.66 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:31.695 AM]: Connection[id: 0bc85b28-d15a-46b0-b840-524830290df6] - connection failed after 181442.79 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:35.671 AM]: Connection[id: 7bc241fd-e9a0-4fd4-9dba-7ec9df0741b0] - connection failed after 185061.3 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:39.738 AM]: Connection[id: d103ad68-59f3-4f5f-b04e-0181e9d5c339] - connection failed after 111686.48 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:45.831 AM]: Connection[id: 145d8a5f-efe2-4fb2-a1f5-b60f4033cb38] - connection failed after 198290.41 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:58:56.509 AM]: Connection[id: 828d3fbd-2e3d-402e-a35f-340b7a3b42c4] - connection failed after 212807.66 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:59:01.388 AM]: Connection[id: 7236fb32-c974-484e-b6f6-be9c3aa309b8] - connection failed after 214676.45 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:59:03.373 AM]: Connection[id: 50f6c5e1-93f1-491a-be2b-622b4c22ad3f] - connection failed after 220401.4 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:59:05.122 AM]: Connection[id: a6fa4bca-7fee-432d-a9ba-4eabbd341738] - connection failed after 209266.71 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:59:09.113 AM]: Connection[id: ccc2812b-f180-46d2-9883-39e986a273fd] - connection failed after 221222.47 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:59:18.897 AM]: Connection[id: 77594019-e71f-401d-a4c6-3f77a1c8d69d] - connection failed after 227015.25 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:59:26.128 AM]: Connection[id: dc2ca87b-d93f-4ffe-bb33-e3afb30d223c] - connection failed after 158077.26 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:59:39.871 AM]: Connection[id: 935780bd-000e-48a1-96b7-330d2505962c] - connection failed after 250880.99 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:59:44.021 AM]: Connection[id: d50f237d-823c-4d33-8b48-2a5b93ae107a] - connection failed after 175968.73 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[7:59:49.014 AM]: Connection[id: ad53dfe7-331b-47f4-a3db-3fc7e4ce4fea] - connection failed after 256751.57 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[8:00:26.103 AM]: Connection[id: 5726ec81-cfa7-47e5-ad2f-eaf2ce1eb6d4] - connection failed after 218051.23 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[8:00:26.958 AM]: Connection[id: fbf5e73e-22d7-4c48-bd5c-f0930786d807] - connection failed after 218908.53 milliseconds. Error: Request to Snowflake failed."}
+{"level":"ERROR","message":"[8:00:42.891 AM]: Connection[id: 4b78c988-76d9-4fd0-a455-d4f364cceb75] - connection failed after 234836.99 milliseconds. Error: Request to Snowflake failed."}
+{"level":"INFO","message":"[8:02:48.765 AM]: Creating new connection object"}
+{"level":"INFO","message":"[8:02:48.798 AM]: Creating Connection[id: 367a080d-59d5-4cc2-9fad-6c53590fd924] with host: tm57297.snowflakecomputing.com, account: tm57297, accessUrl: https://tm57297.snowflakecomputing.com, user: evan, role: undefined, database: MISSION_CONTROL, schema: RUNS, warehouse: COMPUTE_WH, proxy was not configured, password is provided, region: undefined, authenticator: SNOWFLAKE, ocsp mode: FAIL_OPEN, os: win32, os version: 10.0.26100"}
+{"level":"INFO","message":"[8:02:48.801 AM]: Connection[id: 367a080d-59d5-4cc2-9fad-6c53590fd924] additional details: passcode in password is provided, passcode is not provided, private key is not provided, application: MissionControlTest, client name: snowflake-sdk, client version: 2.3.3, retry timeout: 300, private key path: undefined, private key pass is not provided, client store temporary credential: false, browser response timeout: 120000"}
+{"level":"INFO","message":"[8:02:48.804 AM]: Connection[id: 367a080d-59d5-4cc2-9fad-6c53590fd924] - connection object created successfully."}
+{"level":"INFO","message":"[8:02:48.807 AM]: Connection[id: 367a080d-59d5-4cc2-9fad-6c53590fd924] - connecting. Associated Snowflake domain: GLOBAL"}
+{"level":"INFO","message":"[8:02:48.809 AM]: Connection[id: 367a080d-59d5-4cc2-9fad-6c53590fd924] - authentication successful using: SNOWFLAKE"}
+{"level":"INFO","message":"[8:02:48.811 AM]: Trying to initialize Easy Logging"}
+{"level":"INFO","message":"[8:02:48.822 AM]: No client config detected."}
+{"level":"INFO","message":"[8:02:48.823 AM]: No config file path found. Client config will not be used."}
+{"level":"INFO","message":"[8:02:48.825 AM]: Easy Logging is disabled as no config has been found"}
+{"level":"INFO","message":"[8:03:29.258 AM]: Creating new connection object"}
+{"level":"INFO","message":"[8:03:29.300 AM]: Creating Connection[id: c34b1a66-c6de-45a4-912b-5a94eb1084a3] with host: tm57297.snowflakecomputing.com, account: tm57297, accessUrl: https://tm57297.snowflakecomputing.com, user: evan, role: undefined, database: MISSION_CONTROL, schema: RUNS, warehouse: COMPUTE_WH, proxy was not configured, password is provided, region: undefined, authenticator: SNOWFLAKE, ocsp mode: FAIL_OPEN, os: win32, os version: 10.0.26100"}
+{"level":"INFO","message":"[8:03:29.304 AM]: Connection[id: c34b1a66-c6de-45a4-912b-5a94eb1084a3] additional details: passcode in password is provided, passcode is not provided, private key is not provided, application: MissionControlTest, client name: snowflake-sdk, client version: 2.3.3, retry timeout: 300, private key path: undefined, private key pass is not provided, client store temporary credential: false, browser response timeout: 120000"}
+{"level":"INFO","message":"[8:03:29.307 AM]: Connection[id: c34b1a66-c6de-45a4-912b-5a94eb1084a3] - connection object created successfully."}
+{"level":"INFO","message":"[8:03:29.310 AM]: Connection[id: c34b1a66-c6de-45a4-912b-5a94eb1084a3] - connecting. Associated Snowflake domain: GLOBAL"}
+{"level":"INFO","message":"[8:03:29.313 AM]: Connection[id: c34b1a66-c6de-45a4-912b-5a94eb1084a3] - authentication successful using: SNOWFLAKE"}
+{"level":"INFO","message":"[8:03:29.317 AM]: Trying to initialize Easy Logging"}
+{"level":"INFO","message":"[8:03:29.335 AM]: No client config detected."}
+{"level":"INFO","message":"[8:03:29.339 AM]: No config file path found. Client config will not be used."}
+{"level":"INFO","message":"[8:03:29.342 AM]: Easy Logging is disabled as no config has been found"}
+{"level":"INFO","message":"[8:04:00.093 AM]: Creating new connection object"}
+{"level":"INFO","message":"[8:04:00.123 AM]: Creating Connection[id: 1307bc1c-5690-4453-a9a9-16428584ff73] with host: tm57297.snowflakecomputing.com, account: tm57297, accessUrl: https://tm57297.snowflakecomputing.com, user: evan, role: undefined, database: MISSION_CONTROL, schema: RUNS, warehouse: COMPUTE_WH, proxy was not configured, password is provided, region: undefined, authenticator: SNOWFLAKE, ocsp mode: FAIL_OPEN, os: win32, os version: 10.0.26100"}
+{"level":"INFO","message":"[8:04:00.128 AM]: Connection[id: 1307bc1c-5690-4453-a9a9-16428584ff73] additional details: passcode in password is provided, passcode is not provided, private key is not provided, application: MissionControlTest, client name: snowflake-sdk, client version: 2.3.3, retry timeout: 300, private key path: undefined, private key pass is not provided, client store temporary credential: false, browser response timeout: 120000"}
+{"level":"INFO","message":"[8:04:00.131 AM]: Connection[id: 1307bc1c-5690-4453-a9a9-16428584ff73] - connection object created successfully."}
+{"level":"INFO","message":"[8:04:00.133 AM]: Connection[id: 1307bc1c-5690-4453-a9a9-16428584ff73] - connecting. Associated Snowflake domain: GLOBAL"}
+{"level":"INFO","message":"[8:04:00.135 AM]: Connection[id: 1307bc1c-5690-4453-a9a9-16428584ff73] - authentication successful using: SNOWFLAKE"}
+{"level":"INFO","message":"[8:04:00.136 AM]: Trying to initialize Easy Logging"}
+{"level":"INFO","message":"[8:04:00.151 AM]: No client config detected."}
+{"level":"INFO","message":"[8:04:00.153 AM]: No config file path found. Client config will not be used."}
+{"level":"INFO","message":"[8:04:00.156 AM]: Easy Logging is disabled as no config has been found"}
+{"level":"INFO","message":"[8:11:34.893 AM]: Creating new connection object"}
+{"level":"INFO","message":"[8:11:34.927 AM]: Creating Connection[id: f20efb8c-dd68-4fab-99c1-748cecb25dbd] with host: HTJXOVS-TM57297.snowflakecomputing.com, account: HTJXOVS-TM57297, accessUrl: https://HTJXOVS-TM57297.snowflakecomputing.com, user: evan, role: undefined, database: undefined, schema: undefined, warehouse: undefined, proxy was not configured, password is provided, region: undefined, authenticator: SNOWFLAKE, ocsp mode: FAIL_OPEN, os: win32, os version: 10.0.26100"}
+{"level":"INFO","message":"[8:11:34.930 AM]: Connection[id: f20efb8c-dd68-4fab-99c1-748cecb25dbd] additional details: passcode in password is provided, passcode is not provided, private key is not provided, application: MissionControlInit, client name: snowflake-sdk, client version: 2.3.3, retry timeout: 300, private key path: undefined, private key pass is not provided, client store temporary credential: false, browser response timeout: 120000"}
+{"level":"INFO","message":"[8:11:34.931 AM]: Connection[id: f20efb8c-dd68-4fab-99c1-748cecb25dbd] - connection object created successfully."}
+{"level":"INFO","message":"[8:11:34.934 AM]: Connection[id: f20efb8c-dd68-4fab-99c1-748cecb25dbd] - connecting. Associated Snowflake domain: GLOBAL"}
+{"level":"INFO","message":"[8:11:34.936 AM]: Connection[id: f20efb8c-dd68-4fab-99c1-748cecb25dbd] - authentication successful using: SNOWFLAKE"}
+{"level":"INFO","message":"[8:11:34.940 AM]: Trying to initialize Easy Logging"}
+{"level":"INFO","message":"[8:11:34.958 AM]: No client config detected."}
+{"level":"INFO","message":"[8:11:34.961 AM]: No config file path found. Client config will not be used."}
+{"level":"INFO","message":"[8:11:34.964 AM]: Easy Logging is disabled as no config has been found"}
+{"level":"INFO","message":"[8:11:36.308 AM]: Connection[id: f20efb8c-dd68-4fab-99c1-748cecb25dbd] - connection established successfully after 1374.8 milliseconds"}

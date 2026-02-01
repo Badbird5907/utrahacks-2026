@@ -2,6 +2,7 @@ import { google } from '@ai-sdk/google';
 import { streamText, tool, convertToModelMessages, UIMessage } from 'ai';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { query as snowflakeQuery, isConfigured as isSnowflakeConfigured } from '@/lib/snowflake';
 
 // Allow streaming responses up to 60 seconds
 export const maxDuration = 60;
@@ -202,22 +203,46 @@ When referencing these files, use the relative paths shown above (e.g., "./sketc
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
     const { 
       messages, 
       fileContents = {}, 
       competitionMode = false 
     }: { 
-      messages: UIMessage[], 
+      messages: UIMessage[] | { role: string; content: string }[], 
       fileContents?: Record<string, string>,
       competitionMode?: boolean
-    } = await req.json();
+    } = body;
+
+    // Validate messages exist
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return new Response(JSON.stringify({ error: 'Messages array is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Convert simple messages to UIMessage format if needed
+    const normalizedMessages: UIMessage[] = messages.map((msg, index) => {
+      if ('id' in msg && 'parts' in msg) {
+        // Already a UIMessage
+        return msg as UIMessage;
+      }
+      // Convert simple { role, content } to UIMessage format
+      return {
+        id: `msg-${index}-${Date.now()}`,
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        parts: [{ type: 'text', text: msg.content }],
+      } as UIMessage;
+    });
 
     const systemPrompt = buildSystemPrompt(fileContents, competitionMode);
 
     const result = streamText({
       model: google('gemini-3-pro-preview'),
       system: systemPrompt,
-      messages: await convertToModelMessages(messages),
+      messages: await convertToModelMessages(normalizedMessages),
       providerOptions: {
         google: {
           thinkingConfig: {
@@ -361,6 +386,86 @@ Use this to analyze past performance, identify patterns, and suggest specific im
                   .map(r => r.obstacleIssues),
               } : null,
             };
+          },
+        }),
+        querySnowflake: tool({
+          description: `Execute SQL queries against the Snowflake analytics data warehouse for advanced analysis.
+
+IMPORTANT: Only use this tool when you need complex analytics that the getRuns tool cannot provide, such as:
+- Moving averages and trend analysis
+- Statistical correlations
+- Time-series analysis
+- Code version comparisons
+- Aggregations across many runs
+
+Available tables and views:
+- COMPETITION_RUNS: Main table with all run data (id, run_number, start_timestamp, end_timestamp, duration_seconds, score, code_hash, notes, sections_attempted, ramp_type, reached_target_center, ball_landing_zone, ball_hit_wall, obstacle_completed, obstacle_issues, returned_to_start, box_pickup_success, path_unlocked, technical_issues, created_at)
+- SCORE_TRENDS: View with moving averages (run_number, score, moving_avg_5, moving_avg_10, score_change, trend)
+- TARGET_SHOOTING_STATS: View with target shooting data and calculated scores
+- OBSTACLE_COURSE_STATS: View with obstacle course performance
+- CODE_VERSION_PERFORMANCE: View grouping runs by code_hash (avg_score, best_score, run_count, etc.)
+- DAILY_SUMMARY: Aggregated daily statistics
+- OVERALL_STATS: Overall aggregate statistics
+
+Only SELECT queries are allowed. Be concise with your queries - limit results when appropriate.`,
+          inputSchema: z.object({
+            query: z.string().describe('SQL SELECT query to execute against Snowflake'),
+            explanation: z.string().describe('Brief explanation of what this query analyzes'),
+          }),
+          execute: async ({ query, explanation }) => {
+            if (!isSnowflakeConfigured()) {
+              return {
+                success: false,
+                error: 'Snowflake is not configured. Analytics queries are unavailable.',
+                explanation,
+              };
+            }
+
+            // Validate it's a SELECT query
+            const upperQuery = query.toUpperCase().trim();
+            if (!upperQuery.startsWith('SELECT')) {
+              return {
+                success: false,
+                error: 'Only SELECT queries are allowed',
+                explanation,
+              };
+            }
+
+            // Check for forbidden keywords
+            const forbiddenKeywords = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'ALTER', 'TRUNCATE'];
+            for (const keyword of forbiddenKeywords) {
+              const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+              if (regex.test(upperQuery)) {
+                return {
+                  success: false,
+                  error: `Forbidden keyword detected: ${keyword}`,
+                  explanation,
+                };
+              }
+            }
+
+            try {
+              const startTime = Date.now();
+              const results = await snowflakeQuery(query);
+              const executionTime = Date.now() - startTime;
+
+              return {
+                success: true,
+                explanation,
+                rowCount: results.length,
+                executionTimeMs: executionTime,
+                data: results.slice(0, 100), // Limit to 100 rows for readability
+                truncated: results.length > 100,
+              };
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Unknown error';
+              return {
+                success: false,
+                error: `Query failed: ${message}`,
+                explanation,
+                query,
+              };
+            }
           },
         }),
       },
