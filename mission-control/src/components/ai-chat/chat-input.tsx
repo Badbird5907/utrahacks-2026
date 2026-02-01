@@ -1,187 +1,241 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, type KeyboardEvent } from "react";
+import { useState, useRef, useCallback, KeyboardEvent } from "react";
+import { Send, X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FileEntry } from "@/lib/daemon-client";
-import { MentionedFile, useAIChatStore } from "@/lib/ai-state";
-import { useProjectStore } from "@/lib/project-state";
-import { getDaemonClient } from "@/lib/daemon-client";
-import { FileMentionPicker, MentionedFileChip } from "./file-mention";
-import { Send } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  FileMentionPopover,
+  type MentionedFile,
+} from "./file-mention-popover";
+import type { FileEntry } from "@/lib/daemon-client";
 
 interface ChatInputProps {
-  onSubmit: (message: string, fileContents: Record<string, string>) => void;
-  isLoading?: boolean;
+  mentionedFiles: MentionedFile[];
+  onMentionedFilesChange: (files: MentionedFile[]) => void;
+  onSend: (message: string) => void;
   disabled?: boolean;
+  fileTree: FileEntry[] | null;
 }
 
-export function ChatInput({ onSubmit, isLoading, disabled }: ChatInputProps) {
-  const [input, setInput] = useState("");
-  const [showMentionPicker, setShowMentionPicker] = useState(false);
+export function ChatInput({
+  mentionedFiles,
+  onMentionedFilesChange,
+  onSend,
+  disabled = false,
+  fileTree,
+}: ChatInputProps) {
+  const [inputValue, setInputValue] = useState("");
+  const [showMentionPopover, setShowMentionPopover] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
-  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
+  const [mentionStartPos, setMentionStartPos] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const fileTree = useProjectStore((s) => s.fileTree);
-  const mentionedFiles = useAIChatStore((s) => s.mentionedFiles);
-  const addMentionedFile = useAIChatStore((s) => s.addMentionedFile);
-  const removeMentionedFile = useAIChatStore((s) => s.removeMentionedFile);
-  const getMentionedFileContents = useAIChatStore((s) => s.getMentionedFileContents);
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart;
+    setInputValue(value);
 
-  // Auto-resize textarea
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = "auto";
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
-    }
-  }, [input]);
+    // Check for @ mention trigger
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
 
-  // Detect @ mentions
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const value = e.target.value;
-      setInput(value);
-
-      // Check for @ mention
-      const cursorPosition = e.target.selectionStart;
-      const textBeforeCursor = value.slice(0, cursorPosition);
-      const atMatch = textBeforeCursor.match(/@(\w*)$/);
-
-      if (atMatch) {
-        setMentionQuery(atMatch[1]);
-        setShowMentionPicker(true);
-        setMentionPosition({
-          top: -180,
-          left: 0,
-        });
-      } else {
-        setShowMentionPicker(false);
-        setMentionQuery("");
+    if (lastAtIndex !== -1) {
+      // Check if @ is at start or preceded by whitespace
+      const charBeforeAt = lastAtIndex > 0 ? value[lastAtIndex - 1] : " ";
+      if (charBeforeAt === " " || charBeforeAt === "\n" || lastAtIndex === 0) {
+        const query = textBeforeCursor.slice(lastAtIndex + 1);
+        // Only show popover if there's no space after @
+        if (!query.includes(" ") && !query.includes("\n")) {
+          setMentionQuery(query);
+          setMentionStartPos(lastAtIndex);
+          setShowMentionPopover(true);
+          return;
+        }
       }
-    },
-    []
-  );
+    }
 
-  // Handle file selection from picker
+    setShowMentionPopover(false);
+    setMentionQuery("");
+    setMentionStartPos(null);
+  };
+
   const handleFileSelect = useCallback(
-    async (file: FileEntry) => {
-      try {
-        // Fetch file content
-        const client = getDaemonClient();
-        const result = await client.readFile(file.path);
-
-        const mentionedFile: MentionedFile = {
-          path: file.path,
-          name: file.name,
-          content: result.content,
-        };
-
-        addMentionedFile(mentionedFile);
-
-        // Remove the @query from input
-        const cursorPosition = textareaRef.current?.selectionStart || 0;
-        const textBeforeCursor = input.slice(0, cursorPosition);
-        const textAfterCursor = input.slice(cursorPosition);
-        const newTextBeforeCursor = textBeforeCursor.replace(/@\w*$/, "");
-        setInput(newTextBeforeCursor + textAfterCursor);
-
-        setShowMentionPicker(false);
+    (file: MentionedFile) => {
+      // Check if already mentioned
+      if (mentionedFiles.some((f) => f.path === file.path)) {
+        // Just close popover and remove the @query
+        if (mentionStartPos !== null) {
+          const before = inputValue.slice(0, mentionStartPos);
+          const after = inputValue.slice(
+            mentionStartPos + mentionQuery.length + 1
+          );
+          setInputValue(before + after);
+        }
+        setShowMentionPopover(false);
         setMentionQuery("");
-
-        // Focus back on textarea
+        setMentionStartPos(null);
         textareaRef.current?.focus();
-      } catch (error) {
-        console.error("Failed to load file:", error);
+        return;
       }
+
+      // Add file to mentions
+      onMentionedFilesChange([...mentionedFiles, file]);
+
+      // Remove @query from input
+      if (mentionStartPos !== null) {
+        const before = inputValue.slice(0, mentionStartPos);
+        const after = inputValue.slice(
+          mentionStartPos + mentionQuery.length + 1
+        );
+        setInputValue(before + after);
+      }
+
+      setShowMentionPopover(false);
+      setMentionQuery("");
+      setMentionStartPos(null);
+      textareaRef.current?.focus();
     },
-    [input, addMentionedFile]
+    [
+      inputValue,
+      mentionQuery,
+      mentionStartPos,
+      mentionedFiles,
+      onMentionedFilesChange,
+    ]
   );
 
-  // Handle form submission
-  const handleSubmit = useCallback(() => {
-    const trimmedInput = input.trim();
-    if (!trimmedInput || isLoading || disabled) return;
+  const handleRemoveFile = useCallback(
+    (path: string) => {
+      onMentionedFilesChange(mentionedFiles.filter((f) => f.path !== path));
+    },
+    [mentionedFiles, onMentionedFilesChange]
+  );
 
-    const fileContents = getMentionedFileContents();
-    onSubmit(trimmedInput, fileContents);
-    setInput("");
-    
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+  const handleSend = useCallback(() => {
+    const trimmedMessage = inputValue.trim();
+    if (!trimmedMessage && mentionedFiles.length === 0) return;
+
+    onSend(trimmedMessage);
+    setInputValue("");
+    // Don't clear mentioned files - they persist for context
+  }, [inputValue, mentionedFiles.length, onSend]);
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Don't handle if mention popover is open (it handles its own keys)
+    if (showMentionPopover) {
+      if (
+        e.key === "ArrowUp" ||
+        e.key === "ArrowDown" ||
+        e.key === "Enter" ||
+        e.key === "Escape"
+      ) {
+        // Let the popover handle these
+        return;
+      }
     }
-  }, [input, isLoading, disabled, getMentionedFileContents, onSubmit]);
 
-  // Handle keyboard shortcuts
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      // Submit on Enter (without Shift)
-      if (e.key === "Enter" && !e.shiftKey && !showMentionPicker) {
-        e.preventDefault();
-        handleSubmit();
-      }
-    },
-    [handleSubmit, showMentionPicker]
-  );
+    // Ctrl+Enter or Cmd+Enter to send
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      handleSend();
+      return;
+    }
+
+    // Plain Enter to send (if not shift+enter for newline)
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+      return;
+    }
+  };
+
+  const handleCloseMentionPopover = useCallback(() => {
+    setShowMentionPopover(false);
+    setMentionQuery("");
+    setMentionStartPos(null);
+  }, []);
 
   return (
-    <div className="border-t border-border p-2 flex-shrink-0">
-      {/* Mentioned files chips */}
+    <div className="flex flex-col gap-2 p-3 border-t bg-background">
+      {/* File chips */}
       {mentionedFiles.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2 overflow-hidden">
+        <div className="flex flex-wrap gap-1">
           {mentionedFiles.map((file) => (
-            <MentionedFileChip
+            <Badge
               key={file.path}
-              name={file.name}
-              path={file.path}
-              onRemove={() => removeMentionedFile(file.path)}
-            />
+              variant="secondary"
+              className="gap-1 text-xs pl-1.5 pr-1 py-0.5"
+            >
+              <FileText className="h-3 w-3" />
+              <span className="max-w-32 truncate">{file.name}</span>
+              <button
+                type="button"
+                onClick={() => handleRemoveFile(file.path)}
+                className="ml-0.5 rounded-sm hover:bg-muted-foreground/20 p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
           ))}
         </div>
       )}
 
-      {/* Input area */}
-      <div className="relative">
-        {/* File mention picker */}
-        {showMentionPicker && (
-          <FileMentionPicker
-            fileTree={fileTree}
-            searchQuery={mentionQuery}
-            onSelect={handleFileSelect}
-            onClose={() => setShowMentionPicker(false)}
-            position={mentionPosition}
-          />
-        )}
-
-        <div className="flex items-end gap-1.5">
+      {/* Input row */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
           <textarea
             ref={textareaRef}
-            value={input}
+            value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Message... (@file)"
-            disabled={disabled || isLoading}
+            placeholder="Ask about your code... (@ to mention files)"
+            disabled={disabled}
             rows={1}
             className={cn(
-              "flex-1 min-w-0 resize-none rounded-md border border-input bg-background px-2.5 py-1.5 text-sm",
-              "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1",
-              "focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-              "min-h-[36px] max-h-[120px]"
+              "w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm",
+              "placeholder:text-muted-foreground",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+              "min-h-[38px] max-h-32"
             )}
+            style={{
+              height: "auto",
+              minHeight: "38px",
+            }}
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = "auto";
+              target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+            }}
           />
 
-          <Button
-            size="icon"
-            onClick={handleSubmit}
-            disabled={!input.trim() || isLoading || disabled}
-            className="flex-shrink-0 h-9 w-9"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          {/* Mention popover */}
+          {showMentionPopover && (
+            <FileMentionPopover
+              query={mentionQuery}
+              fileTree={fileTree}
+              onSelect={handleFileSelect}
+              onClose={handleCloseMentionPopover}
+            />
+          )}
         </div>
+
+        <Button
+          size="icon"
+          onClick={handleSend}
+          disabled={disabled || (!inputValue.trim() && mentionedFiles.length === 0)}
+          className="shrink-0"
+        >
+          <Send className="h-4 w-4" />
+        </Button>
       </div>
+
+      {/* Keyboard hint */}
+      <p className="text-[10px] text-muted-foreground">
+        Enter to send, Shift+Enter for newline
+      </p>
     </div>
   );
 }

@@ -16,12 +16,13 @@ Your capabilities:
 
 When editing files:
 - Use the editFile tool to make changes
-- Use the listFiles tool to list the files in the project
+- Use the listFiles tool to list the files in the project (use "./" for the project root)
 - Be precise with the oldContent parameter - it must exactly match existing code
 - Make minimal, focused changes
 - Explain what you changed and why
+- Always use relative paths (e.g., "./sketch.ino", "./lib/helpers.h")
 
-When users @mention files, their contents are provided as context. Reference these files when answering questions or making edits.
+When users @mention files, their contents are provided as context with relative paths. Use these relative paths when referencing or editing files.
 
 Be concise but helpful. Use code blocks with appropriate syntax highlighting.`;
 
@@ -45,7 +46,7 @@ The user has provided the following files for context:
 
 ${fileContext}
 
-When referencing these files, use their full paths for the editFile tool.`;
+When referencing these files, use the relative paths shown above (e.g., "./sketch.ino").`;
 }
 
 export async function POST(req: Request) {
@@ -55,14 +56,14 @@ export async function POST(req: Request) {
     const systemPrompt = buildSystemPrompt(fileContents);
 
     const result = streamText({
-      model: google('gemini-3-pro-preview'),
+      model: google('gemini-2.5-flash-preview-09-2025'),
       system: systemPrompt,
       messages: await convertToModelMessages(messages),
       tools: {
         editFile: tool({
           description: 'Edit a file by finding and replacing content. Use this when the user asks you to modify, fix, or update code in a file. The file must be @mentioned in the conversation to have its content available.',
           inputSchema: z.object({
-            filePath: z.string().describe('The full path of the file to edit (use the path from the file context)'),
+            filePath: z.string().describe('The relative path of the file to edit (e.g., "./sketch.ino", "./lib/helpers.h")'),
             oldContent: z.string().describe('The exact content to find and replace. Must match exactly including whitespace and newlines.'),
             newContent: z.string().describe('The new content to replace the old content with'),
             description: z.string().describe('A brief description of what this edit does'),
@@ -73,8 +74,16 @@ export async function POST(req: Request) {
         listFiles: tool({
           description: 'List the files in the project',
           inputSchema: z.object({
-            path: z.string().describe('The path to list the files from'),
+            path: z.string().describe('The relative path to list files from (use "./" for project root)'),
           }),
+          // Client-side tool - no execute function
+        }),
+        readFile: tool({
+          description: 'Read the contents of a file in the project. Use this when you need to see file contents that were not @mentioned by the user.',
+          inputSchema: z.object({
+            filePath: z.string().describe('The relative path of the file to read (e.g., "./sketch.ino")'),
+          }),
+          // Client-side tool - no execute function
         }),
       },
     });

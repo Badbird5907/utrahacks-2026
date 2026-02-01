@@ -2,13 +2,12 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { FolderOpen, X, Check, Upload, MoreVertical, Sparkles } from "lucide-react";
-import { ChatPanel } from "@/components/ai-chat";
-import { useAIChatStore } from "@/lib/ai-state";
 import { Editor } from "@/components/editor/index";
 import { FileTree, FileTreeHeader } from "@/components/file-tree";
 import { OpenProjectDialog } from "@/components/open-project-dialog";
 import { InputDialog } from "@/components/input-dialog";
 import { CompileOutputPanel } from "@/components/compile-output-panel";
+import { AIChatPanel } from "@/components/ai-chat/ai-chat-panel";
 import { useProjectStore } from "@/lib/project-state";
 import { useEditorStore } from "@/lib/state";
 import { useDaemonStore } from "@/lib/daemon-state";
@@ -40,6 +39,7 @@ import type { FileEntry } from "@/lib/daemon-client";
 export default function Home() {
   const [isOpenProjectDialogOpen, setIsOpenProjectDialogOpen] = useState(false);
   const [showOutputPanel, setShowOutputPanel] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
   
   // Dialog states for file/folder creation
   const [newFileDialogOpen, setNewFileDialogOpen] = useState(false);
@@ -82,10 +82,6 @@ export default function Home() {
   const compileSketch = useDaemonStore((s) => s.compileSketch);
   const uploadSketch = useDaemonStore((s) => s.uploadSketch);
   const daemonStatus = useDaemonStore((s) => s.status);
-
-  // AI Chat state
-  const isAIChatOpen = useAIChatStore((s) => s.isOpen);
-  const toggleAIChat = useAIChatStore((s) => s.togglePanel);
 
   // Restore project from localStorage on mount
   useEffect(() => {
@@ -247,17 +243,6 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* AI Chat toggle button */}
-          <Button
-            variant={isAIChatOpen ? "default" : "outline"}
-            size="sm"
-            onClick={toggleAIChat}
-            title="Toggle AI Assistant"
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            AI Chat
-          </Button>
-
           {/* LSP Status indicator */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground mr-4">
             <span
@@ -321,6 +306,17 @@ export default function Home() {
               >
                 <Upload className="h-4 w-4 mr-2" />
                 {compileStatus === "compiling" ? "Uploading..." : "Upload"}
+              </Button>
+
+              {/* AI Chat toggle button */}
+              <div className="w-px h-6 bg-border mx-1" />
+              <Button
+                variant={showAIChat ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setShowAIChat(!showAIChat)}
+                title="Toggle AI Assistant"
+              >
+                <Sparkles className="h-4 w-4" />
               </Button>
 
               {/* <div className="w-px h-6 bg-border mx-1" />
@@ -392,7 +388,7 @@ export default function Home() {
         )}
 
         {/* Editor and Output area */}
-        <ResizablePanel defaultSize={isAIChatOpen ? "60%" : "80%"} minSize="30%">
+        <ResizablePanel defaultSize={showAIChat ? "60%" : "80%"} minSize="30%">
           <ResizablePanelGroup orientation="vertical">
             {/* Editor */}
             <ResizablePanel defaultSize={showOutputPanel ? "70%" : "100%"} minSize="30%">
@@ -423,11 +419,11 @@ export default function Home() {
         </ResizablePanel>
 
         {/* AI Chat Panel */}
-        {isAIChatOpen && (
+        {showAIChat && (
           <>
             <ResizableHandle />
             <ResizablePanel defaultSize="25%" minSize="15%" maxSize="50%">
-              <ChatPanel />
+              <AIChatPanel />
             </ResizablePanel>
           </>
         )}

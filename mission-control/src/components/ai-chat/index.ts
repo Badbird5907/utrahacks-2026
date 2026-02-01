@@ -1,4 +1,5 @@
-export { ChatPanel } from "./chat-panel";
-export { ChatMessages } from "./chat-messages";
+export { AIChatPanel } from "./ai-chat-panel";
+export { ChatMessage } from "./chat-message";
 export { ChatInput } from "./chat-input";
-export { FileMentionPicker, MentionedFileChip } from "./file-mention";
+export { DiffView } from "./diff-view";
+export { FileMentionPopover, type MentionedFile } from "./file-mention-popover";
