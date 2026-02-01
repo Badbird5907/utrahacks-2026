@@ -3,7 +3,7 @@
 import { useEditorStore } from "@/lib/state";
 import { useProjectStore } from "@/lib/project-state";
 import dynamic from "next/dynamic";
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useMemo } from "react";
 import { EditorTabs, EditorTabsEmpty } from "@/components/editor-tabs";
 
 const MonacoEditor = dynamic(
@@ -13,6 +13,19 @@ const MonacoEditor = dynamic(
 
 // Auto-save delay in milliseconds
 const AUTO_SAVE_DELAY = 1000;
+
+/**
+ * Normalize a file path to use forward slashes consistently
+ * Also normalizes Windows drive letters to uppercase for consistent comparison
+ */
+function normalizePath(path: string): string {
+  let normalized = path.replace(/\\/g, '/');
+  // Normalize Windows drive letter to uppercase
+  if (/^[a-zA-Z]:\//.test(normalized)) {
+    normalized = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }
+  return normalized;
+}
 
 interface EditorProps {
   onOpenProject?: () => void;
@@ -27,7 +40,8 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
   const closeDocument = useEditorStore((s) => s.closeDocument);
   const updateDocument = useEditorStore((s) => s.updateDocument);
   const notifyDocumentSaved = useEditorStore((s) => s.notifyDocumentSaved);
-  const getDiagnostics = useEditorStore((s) => s.getDiagnostics);
+  // Subscribe to diagnosticsMap directly for reactivity
+  const diagnosticsMap = useEditorStore((s) => s.diagnosticsMap);
 
   // Project state
   const sketchPath = useProjectStore((s) => s.sketchPath);
@@ -46,10 +60,17 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
 
   // Get active file
   const activeFile = activeFilePath ? getOpenFile(activeFilePath) : undefined;
-  const activeDiagnostics = activeFilePath ? getDiagnostics(activeFilePath) : [];
+  
+  // Get diagnostics for active file with proper reactivity
+  const activeDiagnostics = useMemo(() => {
+    if (!activeFilePath) return [];
+    const normalizedPath = normalizePath(activeFilePath);
+    return diagnosticsMap[normalizedPath] || [];
+  }, [activeFilePath, diagnosticsMap]);
 
   // Initialize LSP when sketch path changes
   useEffect(() => {
+    console.log('[Editor] LSP init effect - sketchPath:', sketchPath);
     if (sketchPath) {
       initializeLsp(sketchPath);
     } else {
@@ -64,7 +85,17 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
 
   // Open document in LSP when file is opened
   useEffect(() => {
+    console.log('[Editor] Document open effect - lspClient:', lspClient ? 'exists' : 'null', 
+      'initialized:', lspClient?.isInitialized(), 
+      'activeFilePath:', activeFilePath);
+    
     if (!lspClient || !activeFilePath || !activeFile) return;
+
+    // Check if LSP is actually initialized
+    if (!lspClient.isInitialized()) {
+      console.log('[Editor] LSP not initialized yet, skipping document open');
+      return;
+    }
 
     // Open document in LSP if not already open
     if (!lspClient.isDocumentOpen(activeFilePath)) {

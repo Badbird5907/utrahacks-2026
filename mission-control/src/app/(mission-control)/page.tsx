@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { FolderOpen, Save, X, AlertTriangle, Play, Check, Upload } from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { FolderOpen, X, Check, Upload, MoreVertical } from "lucide-react";
 import { Editor } from "@/components/editor/index";
 import { FileTree, FileTreeHeader } from "@/components/file-tree";
 import { OpenProjectDialog } from "@/components/open-project-dialog";
@@ -12,10 +12,10 @@ import { useEditorStore } from "@/lib/state";
 import { useDaemonStore } from "@/lib/daemon-state";
 import { Button } from "@/components/ui/button";
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +26,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import type { FileEntry } from "@/lib/daemon-client";
 
 export default function Home() {
@@ -41,6 +48,10 @@ export default function Home() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<FileEntry | null>(null);
 
+  // Rename dialog
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [entryToRename, setEntryToRename] = useState<FileEntry | null>(null);
+
   // Project state
   const sketchPath = useProjectStore((s) => s.sketchPath);
   const sketchInfo = useProjectStore((s) => s.sketchInfo);
@@ -52,6 +63,7 @@ export default function Home() {
   const createFile = useProjectStore((s) => s.createFile);
   const createFolder = useProjectStore((s) => s.createFolder);
   const deleteEntry = useProjectStore((s) => s.deleteEntry);
+  const renameEntry = useProjectStore((s) => s.renameEntry);
   const closeProject = useProjectStore((s) => s.closeProject);
   const refreshFileTree = useProjectStore((s) => s.refreshFileTree);
   const saveAllFiles = useProjectStore((s) => s.saveAllFiles);
@@ -74,6 +86,17 @@ export default function Home() {
     restoreFromStorage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Track previous error to show toast only when error changes
+  const prevErrorRef = useRef<string | null>(null);
+  
+  // Show toast when error occurs
+  useEffect(() => {
+    if (error && error !== prevErrorRef.current) {
+      toast.error("Error", { description: error });
+    }
+    prevErrorRef.current = error;
+  }, [error]);
 
   // Handlers
   const handleSelectFile = useCallback(
@@ -131,6 +154,23 @@ export default function Home() {
     }
   }, [entryToDelete, deleteEntry]);
 
+  // Request rename - opens dialog
+  const handleRequestRename = useCallback((entry: FileEntry) => {
+    setEntryToRename(entry);
+    setRenameDialogOpen(true);
+  }, []);
+
+  // Actually rename the entry
+  const handleConfirmRename = useCallback(
+    async (newName: string) => {
+      if (entryToRename) {
+        await renameEntry(entryToRename.path, newName);
+        setEntryToRename(null);
+      }
+    },
+    [entryToRename, renameEntry]
+  );
+
   // Header button handlers
   const handleNewFileAtRoot = useCallback(() => {
     if (sketchPath) {
@@ -143,15 +183,6 @@ export default function Home() {
       handleRequestCreateFolder(sketchPath);
     }
   }, [sketchPath, handleRequestCreateFolder]);
-
-  const handleSaveAll = useCallback(async () => {
-    await saveAllFiles();
-    // Notify LSP for each saved file
-    const openFiles = useProjectStore.getState().openFiles;
-    for (const file of openFiles) {
-      notifyDocumentSaved(file.path);
-    }
-  }, [saveAllFiles, notifyDocumentSaved]);
 
   const handleOpenProject = useCallback(() => {
     setIsOpenProjectDialogOpen(true);
@@ -230,19 +261,27 @@ export default function Home() {
             </span>
           </div>
 
-          <OpenProjectDialog
-            trigger={
-              <Button variant="outline" size="sm">
-                <FolderOpen className="h-4 w-4 mr-2" />
-                Open Project
-              </Button>
-            }
-            open={isOpenProjectDialogOpen}
-            onOpenChange={setIsOpenProjectDialogOpen}
-          />
-
           {sketchPath && (
             <>
+              {/* Project dropdown menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={handleOpenProject}>
+                    <FolderOpen className="h-4 w-4 mr-2" />
+                    Open Project
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={closeProject}>
+                    <X className="h-4 w-4 mr-2" />
+                    Close Project
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               {/* Verify/Compile button */}
               <Button
                 variant="outline"
@@ -267,7 +306,7 @@ export default function Home() {
                 {compileStatus === "compiling" ? "Uploading..." : "Upload"}
               </Button>
 
-              <div className="w-px h-6 bg-border mx-1" />
+              {/* <div className="w-px h-6 bg-border mx-1" />
 
               <Button
                 variant="outline"
@@ -277,75 +316,95 @@ export default function Home() {
               >
                 <Save className="h-4 w-4 mr-2" />
                 Save All
-              </Button>
-
-              <Button variant="outline" size="sm" onClick={closeProject}>
-                <X className="h-4 w-4 mr-2" />
-                Close
-              </Button>
+              </Button> */}
             </>
+          )}
+
+          {!sketchPath && (
+            <OpenProjectDialog
+              trigger={
+                <Button variant="outline" size="sm">
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  Open Project
+                </Button>
+              }
+              open={isOpenProjectDialogOpen}
+              onOpenChange={setIsOpenProjectDialogOpen}
+            />
           )}
         </div>
       </header>
 
-      {/* Error alert */}
-      {error && (
-        <Alert variant="destructive" className="mx-4 mt-2">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
       {/* Main content */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0">
         {/* Sidebar - File tree */}
         {sketchPath && fileTree && (
-          <aside className="w-64 border-r border-border flex flex-col shrink-0 bg-muted/30">
-            <FileTreeHeader
-              directoryName={sketchInfo?.sketchName || "Project"}
-              onRefresh={refreshFileTree}
-              onNewFile={handleNewFileAtRoot}
-              onNewFolder={handleNewFolderAtRoot}
-            />
-            <div className="flex-1 overflow-auto p-2">
-              {fileTree.map((entry) => (
-                <FileTree
-                  key={entry.path}
-                  entry={entry}
-                  selectedPath={activeFilePath}
-                  onSelect={handleSelectFile}
-                  onDelete={handleRequestDelete}
-                  onRequestCreateFile={handleRequestCreateFile}
-                  onRequestCreateFolder={handleRequestCreateFolder}
-                  level={0}
+          <>
+            <ResizablePanel
+              minSize={100}
+              maxSize={500}
+              className="bg-muted/30"
+            >
+              <div className="flex flex-col h-full">
+                <FileTreeHeader
+                  directoryName={sketchInfo?.sketchName || "Project"}
+                  onRefresh={refreshFileTree}
+                  onNewFile={handleNewFileAtRoot}
+                  onNewFolder={handleNewFolderAtRoot}
                 />
-              ))}
-            </div>
-          </aside>
+                <div className="flex-1 overflow-auto p-2">
+                  {fileTree.map((entry) => (
+                    <FileTree
+                      key={entry.path}
+                      entry={entry}
+                      selectedPath={activeFilePath}
+                      onSelect={handleSelectFile}
+                      onDelete={handleRequestDelete}
+                      onRename={handleRequestRename}
+                      onRequestCreateFile={handleRequestCreateFile}
+                      onRequestCreateFolder={handleRequestCreateFolder}
+                      level={0}
+                      mainFileName={sketchInfo?.mainFile}
+                    />
+                  ))}
+                </div>
+              </div>
+            </ResizablePanel>
+            <ResizableHandle />
+          </>
         )}
 
-        {/* Editor area */}
-        <main className="flex-1 min-w-0 overflow-hidden flex flex-col">
-          <div className="flex-1 min-h-0 overflow-hidden">
-            {isLoading ? (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-muted-foreground">Loading project...</p>
+        {/* Editor and Output area */}
+        <ResizablePanel defaultSize="80%" minSize="40%">
+          <ResizablePanelGroup orientation="vertical">
+            {/* Editor */}
+            <ResizablePanel defaultSize={showOutputPanel ? "70%" : "100%"} minSize="30%">
+              <div className="h-full overflow-hidden">
+                {isLoading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-muted-foreground">Loading project...</p>
+                  </div>
+                ) : (
+                  <Editor onOpenProject={handleOpenProject} />
+                )}
               </div>
-            ) : (
-              <Editor onOpenProject={handleOpenProject} />
+            </ResizablePanel>
+
+            {/* Compile Output Panel */}
+            {showOutputPanel && (
+              <>
+                <ResizableHandle orientation="vertical" />
+                <ResizablePanel defaultSize="30%" minSize="10%" maxSize="60%">
+                  <CompileOutputPanel
+                    className="h-full"
+                    onClose={() => setShowOutputPanel(false)}
+                  />
+                </ResizablePanel>
+              </>
             )}
-          </div>
-          
-          {/* Compile Output Panel */}
-          {showOutputPanel && (
-            <CompileOutputPanel
-              className="h-48"
-              onClose={() => setShowOutputPanel(false)}
-            />
-          )}
-        </main>
-      </div>
+          </ResizablePanelGroup>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {/* Status bar */}
       <footer className="flex items-center justify-between border-t border-border px-4 py-1 text-xs text-muted-foreground shrink-0">
@@ -388,6 +447,19 @@ export default function Home() {
         placeholder="src"
         submitLabel="Create"
         onSubmit={handleCreateFolder}
+      />
+
+      {/* Rename Dialog */}
+      <InputDialog
+        open={renameDialogOpen}
+        onOpenChange={setRenameDialogOpen}
+        title={`Rename ${entryToRename?.type === "directory" ? "folder" : "file"}`}
+        description={`Enter a new name for "${entryToRename?.name}"`}
+        label="New name"
+        placeholder={entryToRename?.name || ""}
+        defaultValue={entryToRename?.name || ""}
+        submitLabel="Rename"
+        onSubmit={handleConfirmRename}
       />
 
       {/* Delete Confirmation Dialog */}

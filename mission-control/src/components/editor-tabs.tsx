@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,45 @@ function getFileIcon(fileName: string): string {
   return iconColors[ext || ""] || "bg-muted-foreground";
 }
 
+/**
+ * Get display label for a file tab.
+ * Shows just the filename, or includes parent directory path if there are duplicates.
+ */
+function getTabDisplayLabel(file: OpenFile, openFiles: OpenFile[]): string {
+  const duplicates = openFiles.filter(f => f.name === file.name);
+  
+  if (duplicates.length <= 1) {
+    return file.name;
+  }
+  
+  // Find the minimum path segments needed to disambiguate
+  const pathSegments = duplicates.map(f => {
+    const normalized = f.path.replace(/\\/g, '/');
+    return normalized.split('/').slice(0, -1); // Get parent directories
+  });
+  
+  // Find how many segments from the end we need to show to make each unique
+  const fileIndex = duplicates.findIndex(f => f.path === file.path);
+  const currentSegments = pathSegments[fileIndex];
+  
+  // Start from 1 segment and increase until we find uniqueness
+  for (let depth = 1; depth <= currentSegments.length; depth++) {
+    const currentSuffix = currentSegments.slice(-depth).join('/');
+    const isUnique = pathSegments.every((segments, idx) => {
+      if (idx === fileIndex) return true;
+      const otherSuffix = segments.slice(-depth).join('/');
+      return otherSuffix !== currentSuffix;
+    });
+    
+    if (isUnique) {
+      return `${currentSuffix}/${file.name}`;
+    }
+  }
+  
+  // Fallback: show full path
+  return file.path.replace(/\\/g, '/');
+}
+
 export function EditorTabs({
   openFiles,
   activeFilePath,
@@ -38,6 +78,15 @@ export function EditorTabs({
   onCloseTab,
   hasUnsavedChanges,
 }: EditorTabsProps) {
+  // Compute display labels for all tabs
+  const displayLabels = useMemo(() => {
+    const labels = new Map<string, string>();
+    for (const file of openFiles) {
+      labels.set(file.path, getTabDisplayLabel(file, openFiles));
+    }
+    return labels;
+  }, [openFiles]);
+
   if (openFiles.length === 0) {
     return null;
   }
@@ -47,6 +96,7 @@ export function EditorTabs({
       {openFiles.map((file) => {
         const isActive = file.path === activeFilePath;
         const isUnsaved = hasUnsavedChanges(file.path);
+        const displayLabel = displayLabels.get(file.path) || file.name;
 
         return (
           <div
@@ -58,6 +108,7 @@ export function EditorTabs({
                 : "bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             )}
             onClick={() => onSelectTab(file.path)}
+            title={file.path}
           >
             {/* File type indicator dot */}
             <span
@@ -68,7 +119,7 @@ export function EditorTabs({
             />
 
             {/* File name */}
-            <span className="truncate max-w-[120px]">{file.name}</span>
+            <span className="truncate max-w-[200px]">{displayLabel}</span>
 
             {/* Unsaved indicator or close button */}
             <div className="flex items-center shrink-0 w-4 h-4">

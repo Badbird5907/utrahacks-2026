@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { readFile, readdir, stat, mkdir, writeFile, rm } from 'fs/promises'
+import { readFile, readdir, stat, mkdir, writeFile, rm, rename } from 'fs/promises'
 import { join, basename, dirname, extname } from 'path'
 import { streamSSE } from 'hono/streaming'
 import chokidar from 'chokidar'
@@ -181,6 +181,22 @@ export function registerFilesystemRoutes(app: Hono) {
     } catch (error: any) {
       console.error('Failed to delete:', error)
       return c.json({ error: 'Failed to delete: ' + error.message }, 500)
+    }
+  })
+
+  // Rename file or directory
+  app.post('/fs/rename', async (c) => {
+    const body = await c.req.json<{ oldPath: string; newPath: string }>()
+    if (!body.oldPath || !body.newPath) {
+      return c.json({ error: 'oldPath and newPath are required' }, 400)
+    }
+
+    try {
+      await rename(body.oldPath, body.newPath)
+      return c.json({ success: true, newPath: body.newPath })
+    } catch (error: any) {
+      console.error('Failed to rename:', error)
+      return c.json({ error: 'Failed to rename: ' + error.message }, 500)
     }
   })
 

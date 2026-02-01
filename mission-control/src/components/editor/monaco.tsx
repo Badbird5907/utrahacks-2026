@@ -259,15 +259,32 @@ async function handleHoverRequest(
       character: position.column - 1,
     });
 
+    if (!hoverInfo || !hoverInfo.contents) {
+      return null;
+    }
+
+    // Handle different content formats
+    let value = '';
+    if (typeof hoverInfo.contents === 'string') {
+      value = hoverInfo.contents;
+    } else if (Array.isArray(hoverInfo.contents)) {
+      value = hoverInfo.contents.map((c: any) => 
+        typeof c === 'string' ? c : c.value || ''
+      ).join('\n\n');
+    } else if ((hoverInfo.contents as MarkupContent).value) {
+      value = (hoverInfo.contents as MarkupContent).value;
+    }
+
+    if (!value) {
+      return null;
+    }
+
     return {
-      contents: [
-        {
-          value: (hoverInfo?.contents as MarkupContent).value,
-        },
-      ],
-      range: convertRange(hoverInfo?.range),
+      contents: [{ value }],
+      range: convertRange(hoverInfo.range),
     };
-  } catch {
+  } catch (error) {
+    console.error('[Monaco] Hover request failed:', error);
     return null;
   }
 }
@@ -332,24 +349,27 @@ async function handleSignatureHelpRequest(
       character: position.column - 1,
     });
 
+    if (!sigInfo || !sigInfo.signatures || sigInfo.signatures.length === 0) {
+      return null;
+    }
+
     return {
       value: {
-        signatures: sigInfo?.signatures.map((sig: SignatureInformation) => {
+        signatures: sigInfo.signatures.map((sig: SignatureInformation) => {
           return {
             label: sig.label,
             documentation: sig.documentation,
             parameters: sig.parameters,
             activeParameter: sig.activeParameter,
           };
-        }) as monaco.languages.SignatureInformation[], // fuck it x2
-        // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-        activeSignature: sigInfo?.activeSignature!,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-        activeParameter: sigInfo?.activeParameter!,
+        }) as monaco.languages.SignatureInformation[],
+        activeSignature: sigInfo.activeSignature ?? 0,
+        activeParameter: sigInfo.activeParameter ?? 0,
       },
       dispose: () => {},
     };
-  } catch {
+  } catch (error) {
+    console.error('[Monaco] Signature help request failed:', error);
     return null;
   }
 }
@@ -360,23 +380,45 @@ async function handleProvideCompletionRequest(
 ): Promise<monaco.languages.CompletionList | null> {
   const registered = getRegisteredModel(model);
   if (!registered) {
+    console.warn('[Monaco] No registered model found for completion request');
     return null;
   }
 
   try {
-    const completionInfo = (await (registered.lspClient as any).getCompletion(registered.filePath, {
+    const completionResult = await (registered.lspClient as any).getCompletion(registered.filePath, {
       line: position.lineNumber - 1,
       character: position.column - 1,
-    })) as CompletionList;
+    });
+
+    if (!completionResult) {
+      return { suggestions: [], incomplete: false, dispose: () => {} };
+    }
+
+    // Handle both CompletionList and CompletionItem[] responses
+    let items: CompletionItem[];
+    let isIncomplete = false;
+    
+    if (Array.isArray(completionResult)) {
+      // Response is CompletionItem[]
+      items = completionResult;
+    } else if (completionResult.items) {
+      // Response is CompletionList
+      items = completionResult.items;
+      isIncomplete = completionResult.isIncomplete ?? false;
+    } else {
+      console.warn('[Monaco] Unexpected completion response format:', completionResult);
+      return { suggestions: [], incomplete: false, dispose: () => {} };
+    }
 
     return {
-      suggestions: completionInfo.items.map((item) => {
+      suggestions: items.map((item) => {
         return convertCompletionItem(item, model);
       }),
-      incomplete: completionInfo.isIncomplete,
+      incomplete: isIncomplete,
       dispose: () => {},
     };
-  } catch {
+  } catch (error) {
+    console.error('[Monaco] Completion request failed:', error);
     return null;
   }
 }
@@ -385,30 +427,18 @@ type CompletionItemWithModelAndOriginal = monaco.languages.CompletionItem & {
   model: monaco.editor.ITextModel;
   __original: CompletionItem;
 };
+
+/**
+ * Handle completion item resolve requests.
+ * Note: The Arduino Language Server does NOT support completionItem/resolve,
+ * so we simply return the item as-is without making the LSP call.
+ */
 async function handleResolveCompletionRequest(
   item: monaco.languages.CompletionItem,
-): Promise<monaco.languages.CompletionItem | null> {
-  const model = (item as CompletionItemWithModelAndOriginal).model as
-    | monaco.editor.ITextModel
-    | undefined;
-  const original = (item as CompletionItemWithModelAndOriginal).__original as
-    | CompletionItem
-    | undefined;
-  if (!model || !original) {
-    return null;
-  }
-
-  const registered = getRegisteredModel(model);
-  if (!registered) {
-    return null;
-  }
-
-  try {
-    const result = await registered.lspClient.resolveCompletion(original);
-    return convertCompletionItem(result!);
-  } catch {
-    return null;
-  }
+): Promise<monaco.languages.CompletionItem> {
+  // Arduino LSP doesn't support completionItem/resolve - just return the item as-is
+  // This avoids a crash in the Arduino Language Server which panics on unimplemented methods
+  return item;
 }
 
 function convertCompletionItem(
