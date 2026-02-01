@@ -16,9 +16,34 @@ datasource db {
 
 model Runs {
   id String @id @default(auto()) @map("_id") @db.ObjectId
-  timestamp DateTime @default(now())
-
+  number Int // incrementing number for the run
+  startTimestamp DateTime
+  endTimestamp DateTime
   score Int
+  codeHash String
+  notes String
+
+  // Competition-specific fields
+  sectionsAttempted String[] // ["target_shooting", "obstacle_course"] or empty
+  
+  // Target Shooting Section
+  rampType String? // "straight", "curved", or null if not attempted
+  reachedTargetCenter Boolean? // Did robot navigate to black zone?
+  ballLandingZone String? // "blue", "green", "yellow", "red", "white", "missed", "hit_wall"
+  ballHitWall Boolean? // Did ball touch/bounce off wall?
+  
+  // Obstacle Course Section
+  obstacleCompleted Boolean? // Did robot complete the obstacle course?
+  obstacleIssues String? // Description of any problems (e.g., "got stuck on turn 3")
+  
+  // General run info
+  returnedToStart Boolean // Did robot return to starting position?
+  boxPickupSuccess Boolean? // Did robot successfully pick up the box?
+  pathUnlocked String? // "red", "green", or null
+  
+  // Issues and observations
+  technicalIssues String? // Any hardware/software issues during run
+
   metadata Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

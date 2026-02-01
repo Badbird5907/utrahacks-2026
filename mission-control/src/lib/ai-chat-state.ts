@@ -12,10 +12,15 @@ export interface FileEdit {
 }
 
 interface AIChatState {
+  // Competition mode toggle
+  competitionMode: boolean;
+
   // Edit history for undo
   editHistory: FileEdit[];
 
   // Actions
+  setCompetitionMode: (enabled: boolean) => void;
+  toggleCompetitionMode: () => void;
   pushEdit: (edit: Omit<FileEdit, 'id' | 'timestamp'>) => string;
   undoEdit: (editId: string) => Promise<boolean>;
   getEdit: (editId: string) => FileEdit | undefined;
@@ -27,7 +32,16 @@ function generateId(): string {
 }
 
 export const useAIChatStore = create<AIChatState>((set, get) => ({
+  competitionMode: true, // Default to competition mode
   editHistory: [],
+
+  setCompetitionMode: (enabled) => {
+    set({ competitionMode: enabled });
+  },
+
+  toggleCompetitionMode: () => {
+    set((state) => ({ competitionMode: !state.competitionMode }));
+  },
 
   pushEdit: (edit) => {
     const id = generateId();

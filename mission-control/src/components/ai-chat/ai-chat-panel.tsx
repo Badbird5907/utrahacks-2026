@@ -1,11 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Trash2, Loader2, StopCircle } from "lucide-react";
+import { Trash2, Loader2, StopCircle, Trophy } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ChatMessage } from "./chat-message";
 import { ChatInput } from "./chat-input";
 import { type MentionedFile } from "./file-mention-popover";
@@ -23,6 +28,8 @@ export function AIChatPanel() {
   const reloadFile = useProjectStore((s) => s.reloadFile);
   const refreshFileTree = useProjectStore((s) => s.refreshFileTree);
   const pushEdit = useAIChatStore((s) => s.pushEdit);
+  const competitionMode = useAIChatStore((s) => s.competitionMode);
+  const toggleCompetitionMode = useAIChatStore((s) => s.toggleCompetitionMode);
 
   const [mentionedFiles, setMentionedFiles] = useState<MentionedFile[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -89,10 +96,10 @@ export function AIChatPanel() {
 
       sendMessage(
         { parts: [{ type: "text", text: messageText }] },
-        { body: { fileContents: contents } }
+        { body: { fileContents: contents, competitionMode } }
       );
     },
-    [mentionedFiles, sendMessage, sketchPath]
+    [mentionedFiles, sendMessage, sketchPath, competitionMode]
   );
 
   const handleClearChat = useCallback(() => {
@@ -104,15 +111,37 @@ export function AIChatPanel() {
     <div className="flex flex-col h-full bg-background">
       <div className="flex items-center justify-between px-3 py-2 border-b shrink-0">
         <span className="text-sm font-medium">Gemini</span>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleClearChat}
-          className="h-7 w-7"
-          title="Clear chat"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={competitionMode ? "default" : "ghost"}
+                size="icon"
+                onClick={toggleCompetitionMode}
+                className="h-7 w-7"
+              >
+                <Trophy className={`h-4 w-4 ${competitionMode ? "" : "text-muted-foreground"}`} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p className="font-medium">{competitionMode ? "Competition Mode ON" : "Competition Mode OFF"}</p>
+              <p className="text-xs text-muted-foreground">
+                {competitionMode 
+                  ? "AI is optimizing for competition performance" 
+                  : "AI is in general assistant mode"}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleClearChat}
+            className="h-7 w-7"
+            title="Clear chat"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>

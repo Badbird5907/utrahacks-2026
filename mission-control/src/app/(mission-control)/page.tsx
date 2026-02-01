@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { FolderOpen, X, Check, Upload, MoreVertical, Sparkles, Terminal, ChevronDown } from "lucide-react";
+import { FolderOpen, X, Check, Upload, MoreVertical, Sparkles, Terminal, ChevronDown, Play } from "lucide-react";
 import { Editor } from "@/components/editor/index";
 import { FileTree, FileTreeHeader } from "@/components/file-tree";
 import { OpenProjectDialog } from "@/components/open-project-dialog";
 import { InputDialog } from "@/components/input-dialog";
+import { RunDialog } from "@/components/run-dialog";
 import { OutputPanel } from "@/components/output-panel";
 import { AIChatPanel } from "@/components/ai-chat/ai-chat-panel";
 import { useProjectStore } from "@/lib/project-state";
@@ -48,6 +49,7 @@ export default function Home() {
   const [entryToDelete, setEntryToDelete] = useState<FileEntry | null>(null);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [entryToRename, setEntryToRename] = useState<FileEntry | null>(null);
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
   const sketchPath = useProjectStore((s) => s.sketchPath);
   const sketchInfo = useProjectStore((s) => s.sketchInfo);
   const fileTree = useProjectStore((s) => s.fileTree);
@@ -299,6 +301,16 @@ export default function Home() {
                 )}
               </Button>
 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRunDialogOpen(true)}
+                title="Begin a timed run"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Begin Run
+              </Button>
+
               <div className="w-px h-6 bg-border mx-1" />
               <Button
                 variant={showAIChat ? "secondary" : "outline"}
@@ -487,6 +499,11 @@ export default function Home() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <RunDialog
+        open={runDialogOpen}
+        onOpenChange={setRunDialogOpen}
+      />
     </div>
   );
 }
