@@ -1,45 +1,66 @@
-# Ultrasonic Spiral Art 🌀
+# Ultrasonic Spiral Art & NFT Minter 🌀💎
 
-Turn your hand movements into generative art! This project uses an Arduino Ultrasonic Sensor to create colorful spiral visualizations based on distance.
+Create generative spiral art with your hand and mint it as a Solana NFT!
 
-## 📂 The Files
-- **`app.py`** (Recommended): A **Live Web Interface** that draws the spiral in real-time in your browser.
-- **`main.py`**: Records a session and saves a static high-quality image (`spiral_art.png`).
-- **`live_plot.py`**: Shows a raw real-time graph of the distance data.
+## 📂 The Tools
+1.  **`app.py` (Live Web App)**: Interactive web interface to watch the art growing live in your browser.
+2.  **`main.py` (NFT Minter)**: Records a session, saves the image, and **automatically mints it as an NFT** on Solana Devnet.
+3.  **`live_plot.py`**: A raw real-time data graph.
 
-## 🚀 Setup
-1.  **Install Libraries**:
-    ```bash
-    pip install pyserial pillow numpy matplotlib flask flask-socketio eventlet
-    ```
-2.  **Connect Arduino**:
-    - Plug in your Arduino via USB.
-    - **Crucial**: Close the Arduino IDE Serial Monitor to avoid "Resource Busy" errors.
+## 🚀 Quick Setup
 
-## 🎨 How to Run
+### 1. Install Dependencies
+You need Python and Node.js.
+```bash
+# Python Libraries
+pip install pyserial pillow numpy matplotlib flask flask-socketio eventlet
 
-### 1. Live Web Interface (Best Experience)
-Watch the art generate live!
+# Node.js Libraries (for NFT minting)
+cd NFT  # Make sure you are in the folder
+npm install
+```
+
+### 2. Connect Arduino
+- Plug it in via USB.
+- **Close the Arduino IDE Serial Monitor** (or the script won't work!).
+
+---
+
+## 🎮 How to Use
+
+### Option A: The Live Experience (Web App)
+Best for playing around and visualizing.
 ```bash
 python3 app.py
 ```
-Then open **[http://localhost:5000](http://localhost:5000)** in your browser.
+👉 Open **[http://localhost:5000](http://localhost:5000)** in your browser.
 
-### 2. Static Image Generator
-Record a dataset and generate a finalized image file.
-```bash
-python3 main.py
-```
-
-## 🧠 How it Works
-**How does a sensor make a spiral?**
-
-1.  **The Canvas (Time)**: The script forces the drawing path into a **Spiral** that grows from the center outwards over time.
-2.  **The Brush (Distance)**:
-    - **Size**: Closer hand = Bigger dot.
-    - **Color**: Distance determines the color (Red=Close, Blue=Far).
-
-So, waving your hand creates a spiral timeline of colorful bubbles! 🫧
+### Option B: Create & Mint NFT (The Real Deal)
+1.  **Run the Minter**:
+    ```bash
+    python3 main.py
+    ```
+2.  **First Run Only**:
+    - It will say "No wallet found!" and create one.
+    - **Copy the Public Key** it shows.
+    - Go to [Solana Faucet](https://faucet.solana.com) and airdrop yourself some Devnet SOL.
+3.  **Run it again**:
+    - Wave your hand to create art.
+    - Wait for it to save.
+    - **Boom!** It mints the NFT and gives you a link to view it on the Solana Explorer.
 
 ---
-> **Troubleshooting**: If you get `[Errno 16] Resource busy`, it means another program (like the Arduino IDE or another script) is using the serial port. Close it and try again.
+
+## 🧠 How it Works
+**The Algorithm**:
+- **Time** = The Spiral Path (growing outwards).
+- **Distance** = The "Ink" (Bubble Size & Color).
+
+**The Tech**:
+- Python handles the Hardware (Serial) and Image Generation.
+- Node.js (Metaplex) handles the Blockchain interaction.
+
+---
+> **Troubleshooting**:
+> - `Resource busy`: Close other scripts or Arduino IDE.
+> - `Low Balance`: You forgot to fund your wallet! Use the faucet.
