@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  mission-control:
+    image: registry.digitalocean.com/utrahacks/mission-control:latest
+    container_name: mission-control
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXT_PUBLIC_DAEMON_URL=${NEXT_PUBLIC_DAEMON_URL}
+      - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY}
+    networks:
+      - app-network
+    expose:
+      - "3000"
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - mission-control
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

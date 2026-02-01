@@ -9,7 +9,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Copy package files
-COPY mission-control/package.json mission-control/pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install production dependencies only
 RUN pnpm install --prod --frozen-lockfile
@@ -30,13 +30,13 @@ COPY --from=deps /app/node_modules ./node_modules
 
 # Copy the built application
 # Assumes you've already run 'pnpm build' locally
-COPY mission-control/.next ./.next
-COPY mission-control/public ./public
-COPY mission-control/package.json ./package.json
-COPY mission-control/next.config.ts ./next.config.ts
+COPY .next ./.next
+COPY public ./public
+COPY package.json ./package.json
+COPY next.config.ts ./next.config.ts
 
 # Copy prisma if it exists (for database migrations)
-COPY mission-control/prisma ./prisma
+COPY prisma ./prisma
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app

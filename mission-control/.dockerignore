@@ -1,0 +1,45 @@
+# Dependencies
+node_modules
+npm-debug.log
+pnpm-debug.log
+yarn-error.log
+yarn.lock
+package-lock.json
+
+# Testing
+.coverage
+coverage
+.nyc_output
+
+# Development
+.vscode
+.idea
+.DS_Store
+tmp
+temp
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Documentation
+README.md
+CHANGELOG.md
+docs
+*.md
+
+# Environment variables (should be injected at runtime)
+.env
+.env.*
+
+# Build artifacts (will be copied explicitly)
+tsconfig.tsbuildinfo
+
+# Keep only what's needed for production
+# .next and public folders will be explicitly copied
