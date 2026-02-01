@@ -60,14 +60,19 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
   const updateFileContent = useProjectStore((s) => s.updateFileContent);
   const saveFile = useProjectStore((s) => s.saveFile);
   const hasUnsavedChanges = useProjectStore((s) => s.hasUnsavedChanges);
-  const getOpenFile = useProjectStore((s) => s.getOpenFile);
 
   // Auto-save timer ref
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingSavePathRef = useRef<string | null>(null);
 
-  // Get active file
-  const activeFile = activeFilePath ? getOpenFile(activeFilePath) : undefined;
+  // Get active file - derive directly from openFiles for proper reactivity
+  const activeFile = useMemo(() => {
+    if (!activeFilePath) return undefined;
+    const normalizedActivePath = normalizePath(activeFilePath);
+    const file = openFiles.find(f => normalizePath(f.path) === normalizedActivePath);
+    console.log('[Editor] activeFile updated:', file?.path, 'lastModified:', file?.lastModified);
+    return file;
+  }, [activeFilePath, openFiles]);
   
   // Get diagnostics for active file with proper reactivity
   const activeDiagnostics = useMemo(() => {
@@ -240,6 +245,7 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
       <div className="flex-1 min-h-0">
         {activeFile ? (
           <MonacoEditor
+            key={`${activeFilePath}-${activeFile.externalVersion}`}
             lspClient={activeFilePath && isLspSupportedFile(activeFilePath) ? lspClient ?? undefined : undefined}
             filePath={activeFilePath!}
             code={activeFile.content}

@@ -45,6 +45,7 @@ export interface OpenFile {
   content: string;
   originalContent: string;  // For tracking unsaved changes
   lastModified: number;
+  externalVersion: number;  // Increments only on external changes (AI edits, etc.) to force editor remount
 }
 
 interface ProjectState {
@@ -62,6 +63,7 @@ interface ProjectState {
   // File watcher
   watcherAbortController: AbortController | null;
   externalChanges: Map<string, number>;  // path -> lastModified
+  pendingReloads: Set<string>;  // Files being reloaded by us (skip watcher updates)
 
   // Actions
   openProject: (path: string) => Promise<boolean>;
@@ -86,6 +88,7 @@ interface ProjectState {
   hasUnsavedChanges: (path?: string) => boolean;
   getOpenFile: (path: string) => OpenFile | undefined;
   acknowledgeExternalChange: (path: string) => void;
+  reloadFile: (path: string) => Promise<void>;
   
   // Persistence
   restoreFromStorage: () => Promise<void>;
@@ -107,6 +110,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   activeFilePath: null,
   watcherAbortController: null,
   externalChanges: new Map(),
+  pendingReloads: new Set(),
 
   // ==========================================================================
   // Project Operations
@@ -150,6 +154,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         activeFilePath: null,
         watcherAbortController: newAbortController,
         externalChanges: new Map(),
+        pendingReloads: new Set(),
       });
 
       // Persist to localStorage
@@ -192,6 +197,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       activeFilePath: null,
       watcherAbortController: null,
       externalChanges: new Map(),
+      pendingReloads: new Set(),
       error: null,
     });
   },
@@ -236,6 +242,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         content: result.content,
         originalContent: result.content,
         lastModified: result.lastModified,
+        externalVersion: 0,
       };
 
       set(state => {
@@ -462,6 +469,58 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     });
   },
 
+  reloadFile: async (path: string) => {
+    const normalizedPath = normalizePath(path);
+    const { openFiles, pendingReloads } = get();
+    const existingFile = openFiles.find(f => normalizePath(f.path) === normalizedPath);
+    if (!existingFile) {
+      console.log('[reloadFile] File not open:', normalizedPath);
+      return;
+    }
+
+    // Mark as pending reload to prevent watcher from interfering
+    const newPendingReloads = new Set(pendingReloads);
+    newPendingReloads.add(normalizedPath);
+    set({ pendingReloads: newPendingReloads });
+
+    console.log('[reloadFile] Reloading file:', normalizedPath);
+    const client = getDaemonClient();
+    try {
+      const result = await client.readFile(path);
+      console.log('[reloadFile] Got new content, lastModified:', result.lastModified);
+      
+      set(state => {
+        // Remove from pending reloads
+        const updatedPendingReloads = new Set(state.pendingReloads);
+        updatedPendingReloads.delete(normalizedPath);
+        
+        return {
+          pendingReloads: updatedPendingReloads,
+          openFiles: state.openFiles.map(f =>
+            normalizePath(f.path) === normalizedPath 
+              ? { 
+                  ...f, 
+                  content: result.content, 
+                  originalContent: result.content, 
+                  lastModified: result.lastModified,
+                  externalVersion: f.externalVersion + 1,  // Increment to force editor remount
+                } 
+              : f
+          ),
+        };
+      });
+      console.log('[reloadFile] State updated');
+    } catch (error: unknown) {
+      // Remove from pending reloads even on error
+      set(state => {
+        const updatedPendingReloads = new Set(state.pendingReloads);
+        updatedPendingReloads.delete(normalizedPath);
+        return { pendingReloads: updatedPendingReloads };
+      });
+      console.error('Failed to reload file:', error);
+    }
+  },
+
   // ==========================================================================
   // Persistence
   // ==========================================================================
@@ -510,9 +569,16 @@ async function startFileWatcher(
       switch (event.event) {
         case 'change': {
           // Mark file as externally changed
-          const changedPath = event.data.path;
-          const { openFiles } = get();
-          const openFile = openFiles.find(f => f.path === changedPath);
+          const changedPath = normalizePath(event.data.path);
+          const { openFiles, pendingReloads } = get();
+          
+          // Skip if we're currently reloading this file ourselves
+          if (pendingReloads.has(changedPath)) {
+            console.log('[FileWatcher] Skipping change event for pending reload:', changedPath);
+            break;
+          }
+          
+          const openFile = openFiles.find(f => normalizePath(f.path) === changedPath);
           
           if (openFile) {
             // Reload file content
@@ -522,7 +588,7 @@ async function startFileWatcher(
                 set(state => ({
                   externalChanges: new Map(state.externalChanges).set(changedPath, result.lastModified),
                   openFiles: state.openFiles.map(f =>
-                    f.path === changedPath
+                    normalizePath(f.path) === changedPath
                       ? { ...f, originalContent: result.content, lastModified: result.lastModified }
                       : f
                   ),
