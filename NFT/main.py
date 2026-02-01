@@ -5,6 +5,14 @@ import time
 import re
 import math
 import random
+import os
+from elevenlabs import ElevenLabs
+from elevenlabs import play
+
+# --- ElevenLabs Configuration ---
+# Set your API key as environment variable: export ELEVENLABS_API_KEY="your_api_key"
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+client = ElevenLabs(api_key=ELEVENLABS_API_KEY) if ELEVENLABS_API_KEY else None
 
 # --- Configuration ---
 PORT = '/dev/cu.usbmodem1401'
@@ -90,6 +98,28 @@ output_filename = 'spiral_art.png'
 img.save(output_filename)
 # img.show() # Optional: Don't block the script with the image viewer
 print(f"Saved to {output_filename}")
+
+# --- ElevenLabs TTS Announcement ---
+if client:
+    print("🎤 Announcing NFT generation...")
+    try:
+        announcement = (
+            "Your NFT is generated! Check it out! "
+            "This is so cool, your unique digital artwork has been created "
+            "from real ultrasonic sensor data. This one-of-a-kind piece is ready "
+            "to be minted on the blockchain. Amazing work!"
+        )
+        audio = client.text_to_speech.convert(
+            voice_id="JBFqnCBsd6RMkjVDRZzb",  # George voice - energetic
+            text=announcement,
+            model_id="eleven_multilingual_v2"
+        )
+        play(audio)
+        print("✅ Announcement complete!")
+    except Exception as e:
+        print(f"⚠️ TTS Error: {e}")
+else:
+    print("💡 Tip: Set ELEVENLABS_API_KEY environment variable to enable voice announcements!")
 
 # --- Trigger NFT Minting ---
 import subprocess
