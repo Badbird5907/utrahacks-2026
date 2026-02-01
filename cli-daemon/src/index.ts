@@ -8,10 +8,6 @@ import { registerUploadRoute } from './upload'
 import { registerSerialRoutes } from './serial'
 import { registerCompileRoute } from './compile'
 
-// ============================================================================
-// Hono App Setup
-// ============================================================================
-
 const app = new Hono()
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app })
 
@@ -24,32 +20,16 @@ app.use('/*', cors({
   credentials: false
 }))
 
-// ============================================================================
-// Health Check
-// ============================================================================
-
 app.get('/', (c) => {
   return c.json({ version: 1, status: 'ok' })
 })
 
-// ============================================================================
-// LSP WebSocket Endpoint
-// ============================================================================
-
 app.get('/lsp', upgradeWebSocket((c) => createLspWebSocketHandler(c)))
-
-// ============================================================================
-// Register Route Modules
-// ============================================================================
 
 registerFilesystemRoutes(app)
 registerUploadRoute(app)
 registerSerialRoutes(app)
 registerCompileRoute(app)
-
-// ============================================================================
-// Start Server
-// ============================================================================
 
 const port = 8152
 console.log(`Server starting on port ${port}`)

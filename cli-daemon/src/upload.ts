@@ -5,13 +5,6 @@ import { join } from 'path'
 import { tmpdir } from 'os'
 import { streamSSE } from 'hono/streaming'
 
-// ============================================================================
-// Arduino Upload Route Handler
-// ============================================================================
-
-/**
- * Register Arduino upload route
- */
 export function registerUploadRoute(app: Hono) {
   app.post('/upload', async (c) => {
     console.log('upload')

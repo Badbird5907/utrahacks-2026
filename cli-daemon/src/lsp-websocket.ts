@@ -3,10 +3,6 @@ import type { WSContext } from 'hono/ws'
 import { spawn, ChildProcess } from 'child_process'
 import { wrapWithLspHeaders, LspMessageParser } from './lsp-utils'
 
-// ============================================================================
-// LSP WebSocket Handler
-// ============================================================================
-
 interface LspWebSocketHandler {
   onOpen(_event: Event, ws: WSContext): void
   onMessage(event: MessageEvent, ws: WSContext): void
@@ -14,9 +10,6 @@ interface LspWebSocketHandler {
   onError(event: Event): void
 }
 
-/**
- * Creates WebSocket handler for LSP communication
- */
 export function createLspWebSocketHandler(c: Context): LspWebSocketHandler {
   let lspProcess: ChildProcess | null = null
   const sketchPath = c.req.query('sketchPath')
@@ -43,7 +36,6 @@ export function createLspWebSocketHandler(c: Context): LspWebSocketHandler {
 
       console.log('Spawning:', command, args)
 
-      // Spawn LSP process with sketch path as cwd if provided
       const spawnOptions: { stdio: ['pipe', 'pipe', 'pipe'], shell: boolean, cwd?: string } = {
         stdio: ['pipe', 'pipe', 'pipe'],
         shell: false

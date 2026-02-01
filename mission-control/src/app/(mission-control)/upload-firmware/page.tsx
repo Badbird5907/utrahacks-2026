@@ -116,7 +116,6 @@ export default function UploadFirmwarePage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Port Selection */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Serial Port</label>
@@ -152,7 +151,6 @@ export default function UploadFirmwarePage() {
             )}
           </div>
 
-          {/* File Drop Zone */}
           <div
             onClick={() => !isUploading && fileInputRef.current?.click()}
             onDrop={handleDrop}
@@ -192,7 +190,6 @@ export default function UploadFirmwarePage() {
             )}
           </div>
 
-          {/* Upload Button */}
           <div className="flex gap-2">
             <Button
               onClick={handleUpload}
@@ -229,7 +226,6 @@ export default function UploadFirmwarePage() {
             )}
           </div>
 
-          {/* Status Indicator */}
           {isSuccess && (
             <div className="flex items-center gap-2 p-3 rounded-md bg-green-500/10 text-green-600 dark:text-green-400">
               <CheckCircle2 className="size-5" />
@@ -246,7 +242,6 @@ export default function UploadFirmwarePage() {
             </div>
           )}
 
-          {/* Upload Logs */}
           {uploadLogs.length > 0 && (
             <div className="space-y-2">
               <label className="text-sm font-medium">Upload Log</label>

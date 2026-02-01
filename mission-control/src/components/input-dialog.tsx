@@ -42,6 +42,7 @@ export function InputDialog({
   // Reset value when dialog opens
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setValue(defaultValue);
       // Focus input after dialog animation
       setTimeout(() => {

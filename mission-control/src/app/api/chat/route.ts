@@ -14,6 +14,8 @@ Your capabilities:
 3. Help debug compilation errors and runtime issues
 4. Edit files when the user asks you to make changes
 5. Read serial monitor output to debug runtime behavior (use readSerialLogs tool)
+6. Verify (compile) sketches to check for errors (use verifySketch tool)
+7. Upload sketches to the Arduino board (use uploadSketch tool)
 
 When editing files:
 - Use the editFile tool with a unified diff patch to make changes
@@ -21,6 +23,12 @@ When editing files:
 - Use the readFile tool to read files not already in context
 - Use the readSerialLogs tool to check what the Arduino is outputting via Serial.print()
 - Always use relative paths (e.g., "./sketch.ino", "./lib/helpers.h")
+
+When building/uploading:
+- IMPORTANT: Always run verifySketch BEFORE uploadSketch to catch compilation errors early
+- The verifySketch tool compiles the code but does NOT upload it - use this to check for errors
+- The uploadSketch tool compiles AND uploads the code to the connected Arduino
+- Both tools return the full compiler output so you can see any errors or warnings
 
 ## Unified Diff Format
 
@@ -97,29 +105,32 @@ export async function POST(req: Request) {
             patch: z.string().describe('A unified diff patch starting with --- a/filename and +++ b/filename, followed by hunks with @@ line markers. Include context lines (prefixed with space), removed lines (prefixed with -), and added lines (prefixed with +).'),
             description: z.string().describe('A brief description of what this edit does'),
           }),
-          // No execute function - this is a client-side tool
-          // The frontend will handle the actual file edit via onToolCall
         }),
         listFiles: tool({
           description: 'List the files in the project',
           inputSchema: z.object({
             path: z.string().describe('The relative path to list files from (use "./" for project root)'),
           }),
-          // Client-side tool - no execute function
         }),
         readFile: tool({
           description: 'Read the contents of a file in the project. Use this when you need to see file contents that were not @mentioned by the user.',
           inputSchema: z.object({
             filePath: z.string().describe('The relative path of the file to read (e.g., "./sketch.ino")'),
           }),
-          // Client-side tool - no execute function
         }),
         readSerialLogs: tool({
           description: 'Read the recent serial monitor logs from the Arduino. Use this to see what the Arduino is outputting via Serial.print() statements. This is useful for debugging runtime behavior, checking sensor readings, or understanding what the Arduino is doing.',
           inputSchema: z.object({
             limit: z.number().optional().describe('Maximum number of log lines to return (default: 50, max: 500)'),
           }),
-          // Client-side tool - no execute function
+        }),
+        verifySketch: tool({
+          description: 'Verify (compile) the Arduino sketch to check for errors. This does NOT upload to the board. Use this to check if code compiles correctly. IMPORTANT: Always run this before uploadSketch to catch compilation errors early. Returns the full compiler output.',
+          inputSchema: z.object({}),
+        }),
+        uploadSketch: tool({
+          description: 'Compile and upload the Arduino sketch to the connected board. This will compile the code and flash it to the Arduino. IMPORTANT: Always run verifySketch first to check for compilation errors before uploading. Returns the full compiler/upload output.',
+          inputSchema: z.object({}),
         }),
       },
     });

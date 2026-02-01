@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { FileText, FolderOpen, Pencil, AlertCircle, Loader2 } from "lucide-react";
+import { FileText, FolderOpen, Pencil, AlertCircle, Loader2, CheckCircle, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DiffView } from "./diff-view";
 import { useAIChatStore } from "@/lib/ai-chat-state";
@@ -11,88 +11,161 @@ import {
   ReasoningContent,
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
+import { Streamdown } from "streamdown";
+import { code } from "@streamdown/code";
+import { mermaid } from "@streamdown/mermaid";
+import { math } from "@streamdown/math";
+import { cjk } from "@streamdown/cjk";
+import Editor from "@monaco-editor/react";
+import { useTheme } from "next-themes";
 
-// Simple markdown-ish rendering for code blocks
-function renderTextContent(text: string): React.ReactNode {
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  
-  // Match code blocks ```...```
-  const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
-  let match;
-  
-  while ((match = codeBlockRegex.exec(text)) !== null) {
-    // Add text before code block
-    if (match.index > lastIndex) {
-      parts.push(
-        <span key={`text-${lastIndex}`}>
-          {renderInlineCode(text.slice(lastIndex, match.index))}
-        </span>
-      );
-    }
-    
-    // Add code block
-    const language = match[1] || "";
-    const code = match[2].trim();
-    parts.push(
-      <pre
-        key={`code-${match.index}`}
-        className="my-2 p-2 rounded-md bg-muted text-xs font-mono overflow-x-auto"
-      >
-        {language && (
-          <div className="text-[10px] text-muted-foreground mb-1 uppercase">
-            {language}
-          </div>
-        )}
-        <code>{code}</code>
-      </pre>
-    );
-    
-    lastIndex = match.index + match[0].length;
-  }
-  
-  // Add remaining text
-  if (lastIndex < text.length) {
-    parts.push(
-      <span key={`text-${lastIndex}`}>
-        {renderInlineCode(text.slice(lastIndex))}
-      </span>
-    );
-  }
-  
-  return parts.length > 0 ? parts : text;
-}
+import "katex/dist/katex.min.css";
 
-// Render inline code with backticks
-function renderInlineCode(text: string): React.ReactNode {
-  const parts: React.ReactNode[] = [];
-  const inlineCodeRegex = /`([^`]+)`/g;
-  let lastIndex = 0;
-  let match;
+const MonacoCodeBlock = ({ children, className }: { children: string; className?: string }) => {
+  const { theme } = useTheme();
+  const language = className?.replace('language-', '') || 'text';
+  const languageMap: Record<string, string> = {
+    'js': 'javascript',
+    'ts': 'typescript',
+    'py': 'python',
+    'cpp': 'cpp',
+    'c': 'c',
+    'arduino': 'cpp',
+    'ino': 'cpp',
+    'jsx': 'javascript',
+    'tsx': 'typescript',
+    'json': 'json',
+    'html': 'html',
+    'css': 'css',
+    'sh': 'shell',
+    'bash': 'shell',
+    'yaml': 'yaml',
+    'yml': 'yaml',
+    'md': 'markdown',
+    'txt': 'text',
+  };
   
-  while ((match = inlineCodeRegex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
+  const monacoLanguage = languageMap[language] || language;
+  const code = String(children).replace(/\n$/, '');
+  const lineCount = code.split('\n').length;
+  const lineHeight = 19;
+  const padding = 16;
+  const minHeight = 60;
+  const maxHeight = 400;
+  const calculatedHeight = Math.min(Math.max(lineCount * lineHeight + padding, minHeight), maxHeight);
+  
+  return (
+    <div className="my-3 rounded-lg border border-border overflow-hidden bg-muted/30">
+      {language !== 'text' && (
+        <div className="px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase border-b border-border/50 bg-muted/20">
+          {language}
+        </div>
+      )}
+      <div style={{ height: `${calculatedHeight}px` }}>
+        <Editor
+          value={code}
+          language={monacoLanguage}
+          theme={theme === "dark" ? "vs-dark" : "vs"}
+          options={{
+            readOnly: true,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            lineNumbers: 'off',
+            glyphMargin: false,
+            folding: false,
+            lineDecorationsWidth: 0,
+            lineNumbersMinChars: 0,
+            renderLineHighlight: 'none',
+            scrollbar: {
+              vertical: lineCount * lineHeight > maxHeight ? 'visible' : 'hidden',
+              horizontal: 'auto',
+              verticalScrollbarSize: 10,
+              horizontalScrollbarSize: 10,
+            },
+            overviewRulerLanes: 0,
+            hideCursorInOverviewRuler: true,
+            overviewRulerBorder: false,
+            wordWrap: 'on',
+            wrappingStrategy: 'advanced',
+            fontSize: 13,
+            fontFamily: 'var(--font-geist-mono), Monaco, Menlo, "Courier New", monospace',
+            padding: { top: 8, bottom: 8 },
+            contextmenu: false,
+            selectOnLineNumbers: false,
+            selectionHighlight: false,
+            occurrencesHighlight: 'off',
+            renderWhitespace: 'none',
+            guides: {
+              indentation: false,
+            },
+            extraEditorClassName: "pl-2"
+          }}
+          loading={<div className="flex items-center justify-center h-full text-xs text-muted-foreground">Loading...</div>}
+        />
+      </div>
+    </div>
+  );
+};
+
+const StreamdownComponents = {
+  pre: ({ children }: React.HTMLAttributes<HTMLPreElement>) => {
+    return <>{children}</>;
+  },
+  code: ({ children, className, ...props }: React.HTMLAttributes<HTMLElement> & { className?: string }) => {
+    const isCodeBlock = className?.startsWith('language-');
+    if (isCodeBlock) {
+      return <MonacoCodeBlock className={className}>{String(children)}</MonacoCodeBlock>;
     }
-    parts.push(
+    return (
       <code
-        key={`inline-${match.index}`}
-        className="px-1 py-0.5 rounded bg-muted text-xs font-mono"
+        {...props}
+        className="px-1.5 py-0.5 rounded bg-muted/70 text-[0.9em] font-mono text-foreground border border-border/50"
       >
-        {match[1]}
+        {children}
       </code>
     );
-    lastIndex = match.index + match[0].length;
-  }
-  
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-  
-  return parts.length > 0 ? parts : text;
-}
+  },
+  p: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
+    <p {...props} className="mb-2 last:mb-0 leading-relaxed">
+      {children}
+    </p>
+  ),
+  h1: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
+    <h1 {...props} className="text-2xl font-bold mt-4 mb-3 first:mt-0">
+      {children}
+    </h1>
+  ),
+  h2: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
+    <h2 {...props} className="text-xl font-bold mt-4 mb-2 first:mt-0">
+      {children}
+    </h2>
+  ),
+  h3: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
+    <h3 {...props} className="text-lg font-semibold mt-3 mb-2 first:mt-0">
+      {children}
+    </h3>
+  ),
+  // Custom list styling
+  ul: ({ children, ...props }: React.HTMLAttributes<HTMLUListElement>) => (
+    <ul {...props} className="list-disc list-inside mb-2 space-y-1">
+      {children}
+    </ul>
+  ),
+  ol: ({ children, ...props }: React.HTMLAttributes<HTMLOListElement>) => (
+    <ol {...props} className="list-decimal list-inside mb-2 space-y-1">
+      {children}
+    </ol>
+  ),
+  blockquote: ({ children, ...props }: React.HTMLAttributes<HTMLQuoteElement>) => (
+    <blockquote
+      {...props}
+      className="border-l-4 border-primary/50 pl-4 my-2 italic text-muted-foreground"
+    >
+      {children}
+    </blockquote>
+  ),
+};
 
-// Type for tool parts - these have state, input, and output properties
 interface ToolPartLike {
   state?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -134,7 +207,6 @@ function EditToolPart({ part }: ToolPartProps) {
     const edit = part.output.editId ? getEdit(part.output.editId) : undefined;
     
     if (!edit) {
-      // Fallback if edit not found
       return (
         <div className="text-xs text-muted-foreground flex items-center gap-1.5 py-1">
           <Pencil className="h-3 w-3" />
@@ -220,9 +292,88 @@ function ListFilesToolPart({ part }: ToolPartProps) {
   );
 }
 
-// Type for reasoning parts from the AI SDK
+function VerifySketchToolPart({ part }: ToolPartProps) {
+  if (part.state === "partial-call" || part.state === "call" || part.state === "input-streaming" || part.state === "input-available") {
+    return (
+      <div className="text-xs text-muted-foreground flex items-center gap-1.5 py-1">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Compiling sketch...
+      </div>
+    );
+  }
+
+  if (part.state === "output-error") {
+    return (
+      <div className="text-xs text-destructive flex items-center gap-1.5 py-1">
+        <AlertCircle className="h-3 w-3" />
+        Failed to verify sketch: {part.errorText}
+      </div>
+    );
+  }
+
+  // output-available
+  const success = part.output?.success;
+  const message = part.output?.message;
+
+  if (success) {
+    return (
+      <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1.5 py-1">
+        <CheckCircle className="h-3 w-3" />
+        {message || "Sketch verified successfully"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-xs text-destructive flex items-center gap-1.5 py-1">
+      <AlertCircle className="h-3 w-3" />
+      {message || "Sketch verification failed"}
+    </div>
+  );
+}
+
+function UploadSketchToolPart({ part }: ToolPartProps) {
+  if (part.state === "partial-call" || part.state === "call" || part.state === "input-streaming" || part.state === "input-available") {
+    return (
+      <div className="text-xs text-muted-foreground flex items-center gap-1.5 py-1">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Uploading sketch to Arduino...
+      </div>
+    );
+  }
+
+  if (part.state === "output-error") {
+    return (
+      <div className="text-xs text-destructive flex items-center gap-1.5 py-1">
+        <AlertCircle className="h-3 w-3" />
+        Failed to upload sketch: {part.errorText}
+      </div>
+    );
+  }
+
+  // output-available
+  const success = part.output?.success;
+  const message = part.output?.message;
+
+  if (success) {
+    return (
+      <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1.5 py-1">
+        <Upload className="h-3 w-3" />
+        {message || "Sketch uploaded successfully"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-xs text-destructive flex items-center gap-1.5 py-1">
+      <AlertCircle className="h-3 w-3" />
+      {message || "Sketch upload failed"}
+    </div>
+  );
+}
+
 interface ReasoningPartLike {
-  reasoning: string;
+  text: string;
 }
 
 interface ReasoningPartProps {
@@ -231,12 +382,12 @@ interface ReasoningPartProps {
 }
 
 function ReasoningPart({ part, isStreaming }: ReasoningPartProps) {
-  if (!part.reasoning) return null;
+  if (!part.text) return null;
 
   return (
     <Reasoning isStreaming={isStreaming}>
       <ReasoningTrigger />
-      <ReasoningContent>{part.reasoning}</ReasoningContent>
+      <ReasoningContent>{part.text}</ReasoningContent>
     </Reasoning>
   );
 }
@@ -248,6 +399,19 @@ interface ChatMessageProps {
 
 export const ChatMessage = memo(function ChatMessage({ message, isStreaming = false }: ChatMessageProps) {
   const isUser = message.role === "user";
+  const shouldShowGenerating = isStreaming && message.role === "assistant" && (() => {
+    const hasText = message.parts.some(p => p.type === "text" && (p as { text: string }).text?.trim());
+    const hasReasoning = message.parts.some(p => p.type === "reasoning");
+    const hasToolCalls = message.parts.some(p => p.type.startsWith("tool-"));
+    const allToolsCompleted = message.parts
+      .filter(p => p.type.startsWith("tool-"))
+      .every(p => {
+        const toolPart = p as unknown as ToolPartLike;
+        return toolPart.state === "output-available" || toolPart.state === "output-error";
+      });
+    
+    return hasToolCalls && allToolsCompleted && !hasText && !hasReasoning;
+  })();
 
   return (
     <div
@@ -265,25 +429,30 @@ export const ChatMessage = memo(function ChatMessage({ message, isStreaming = fa
         {message.parts.map((part, index) => {
           const key = `${message.id}-part-${index}`;
           const partType = part.type;
-
-          // Handle reasoning parts
           if (partType === "reasoning") {
             const reasoningPart = part as unknown as ReasoningPartLike;
             return <ReasoningPart key={key} part={reasoningPart} isStreaming={isStreaming} />;
           }
-
-          // Handle text parts
           if (partType === "text") {
             const textPart = part as { type: "text"; text: string };
             if (!textPart.text) return null;
             return (
-              <div key={key} className="whitespace-pre-wrap break-words">
-                {renderTextContent(textPart.text)}
+              <div key={key} className="whitespace-pre-wrap wrap-break-word">
+                <Streamdown
+                  plugins={{
+                    code: code,
+                    mermaid: mermaid,
+                    math: math,
+                    cjk: cjk,
+                  }}
+                  components={StreamdownComponents}
+                  isAnimating={isStreaming}
+                >
+                  {textPart.text}
+                </Streamdown>
               </div>
             );
           }
-
-          // Handle tool parts - they start with "tool-"
           if (partType.startsWith("tool-")) {
             const toolName = partType.slice(5); // Remove "tool-" prefix
             const toolPart = part as unknown as ToolPartLike;
@@ -297,14 +466,22 @@ export const ChatMessage = memo(function ChatMessage({ message, isStreaming = fa
             if (toolName === "listFiles") {
               return <ListFilesToolPart key={key} part={toolPart} />;
             }
-
-            // Unknown tool - skip
+            if (toolName === "verifySketch") {
+              return <VerifySketchToolPart key={key} part={toolPart} />;
+            }
+            if (toolName === "uploadSketch") {
+              return <UploadSketchToolPart key={key} part={toolPart} />;
+            }
             return null;
           }
-
-          // Skip other part types (step-start, etc.)
           return null;
         })}
+        {shouldShowGenerating && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-1 mt-1">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span className="text-xs">Generating response...</span>
+          </div>
+        )}
       </div>
     </div>
   );

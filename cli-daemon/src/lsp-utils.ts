@@ -1,18 +1,8 @@
-// ============================================================================
-// LSP Message Framing Utilities
-// ============================================================================
-
-/**
- * Wraps message content with LSP headers
- */
 export function wrapWithLspHeaders(content: string): string {
   const contentLength = Buffer.byteLength(content, 'utf8')
   return `Content-Length: ${contentLength}\r\n\r\n${content}`
 }
 
-/**
- * Parser for LSP messages that handles framing protocol
- */
 export class LspMessageParser {
   private buffer: string = ''
   private onMessage: (message: string) => void

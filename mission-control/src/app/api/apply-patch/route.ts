@@ -127,8 +127,6 @@ export async function POST(req: Request): Promise<Response> {
     const systemPrompt = buildSystemPrompt(validateSyntax);
     const userMessage = buildUserMessage(filePath, originalContent, patch);
 
-
-    console.log("Applying patch with gemini-3-flash-preview")
     const result = await generateText({
       model: google('gemini-2.5-flash-preview-09-2025'),
       system: systemPrompt,
@@ -140,7 +138,6 @@ export async function POST(req: Request): Promise<Response> {
         }
       },
     });
-    // console.log("Result:", result.text);
 
     const response = parseFlashResponse(result.text);
 

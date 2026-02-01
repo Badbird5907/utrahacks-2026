@@ -1,9 +1,9 @@
 import { getDaemonClient } from "@/lib/daemon-client";
+import { useDaemonStore } from "@/lib/daemon-state";
 import { applyPatch } from "@/lib/apply-patch";
 import { toAbsolutePath, formatFileTree } from "./path-utils";
 import { type ToolCall, type AddToolOutput } from "./types";
 
-// Maximum content length to include in error messages for retry context
 const MAX_CONTENT_PREVIEW = 1500;
 
 interface ToolHandlerContext {
@@ -43,11 +43,9 @@ export function createToolHandlers(
       const currentFile = await client.readFile(filePath);
       const originalContent = currentFile.content;
 
-      // Apply patch via Flash model
       const result = await applyPatch(filePath, patch, originalContent);
 
       if (!result.success) {
-        // Return error with file content context for Pro to regenerate
         const contentPreview = originalContent.length > MAX_CONTENT_PREVIEW
           ? originalContent.substring(0, MAX_CONTENT_PREVIEW) + "\n... (truncated)"
           : originalContent;
@@ -68,10 +66,7 @@ ${contentPreview}
         return;
       }
 
-      // Patch applied successfully
       const newContent = result.newContent!;
-
-      // Record edit for undo functionality
       const editId = context.pushEdit({
         filePath,
         previousContent: originalContent,
@@ -79,12 +74,9 @@ ${contentPreview}
         description,
       });
 
-      // Write the patched content to disk
       await client.writeFile(filePath, newContent);
       await context.reloadFile(filePath);
       await context.refreshFileTree();
-
-      // Build success output, include warning if present
       const output: Record<string, unknown> = {
         success: true,
         filePath: rawFilePath,
@@ -229,10 +221,122 @@ ${contentPreview}
     }
   };
 
+  const handleVerifySketch = async (toolCall: ToolCall) => {
+    if (!addToolOutput) {
+      console.error("addToolOutput not available");
+      return;
+    }
+
+    if (!context.sketchPath) {
+      addToolOutput({
+        tool: "verifySketch",
+        toolCallId: toolCall.toolCallId,
+        state: "output-error",
+        errorText: "No sketch is currently open. Please open a project first.",
+      });
+      return;
+    }
+
+    try {
+      const store = useDaemonStore.getState();
+      
+      // Check daemon connection
+      if (store.status !== "connected") {
+        addToolOutput({
+          tool: "verifySketch",
+          toolCallId: toolCall.toolCallId,
+          state: "output-error",
+          errorText: "Not connected to the daemon. Please ensure the daemon is running.",
+        });
+        return;
+      }
+
+      store.clearCompileLogs();
+      const success = await store.compileSketch(context.sketchPath);
+      const logs = useDaemonStore.getState().compileLogs;
+      addToolOutput({
+        tool: "verifySketch",
+        toolCallId: toolCall.toolCallId,
+        output: {
+          success,
+          output: logs.join('\n'),
+          message: success 
+            ? "Compilation successful! The sketch compiled without errors."
+            : "Compilation failed. See output for error details.",
+        },
+      });
+    } catch (error) {
+      console.error("Failed to verify sketch:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      addToolOutput({
+        tool: "verifySketch",
+        toolCallId: toolCall.toolCallId,
+        state: "output-error",
+        errorText: `Verification failed: ${message}`,
+      });
+    }
+  };
+
+  const handleUploadSketch = async (toolCall: ToolCall) => {
+    if (!addToolOutput) {
+      console.error("addToolOutput not available");
+      return;
+    }
+
+    if (!context.sketchPath) {
+      addToolOutput({
+        tool: "uploadSketch",
+        toolCallId: toolCall.toolCallId,
+        state: "output-error",
+        errorText: "No sketch is currently open. Please open a project first.",
+      });
+      return;
+    }
+
+    try {
+      const store = useDaemonStore.getState();
+      if (store.status !== "connected") {
+        addToolOutput({
+          tool: "uploadSketch",
+          toolCallId: toolCall.toolCallId,
+          state: "output-error",
+          errorText: "Not connected to the daemon. Please ensure the daemon is running.",
+        });
+        return;
+      }
+
+      store.clearCompileLogs();
+      const success = await store.uploadSketch(context.sketchPath);
+      const logs = useDaemonStore.getState().compileLogs;
+      addToolOutput({
+        tool: "uploadSketch",
+        toolCallId: toolCall.toolCallId,
+        output: {
+          success,
+          output: logs.join('\n'),
+          message: success 
+            ? "Upload successful! The sketch has been uploaded to the Arduino."
+            : "Upload failed. See output for error details.",
+        },
+      });
+    } catch (error) {
+      console.error("Failed to upload sketch:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      addToolOutput({
+        tool: "uploadSketch",
+        toolCallId: toolCall.toolCallId,
+        state: "output-error",
+        errorText: `Upload failed: ${message}`,
+      });
+    }
+  };
+
   return {
     handleEditFile,
     handleReadFile,
     handleListFiles,
     handleReadSerialLogs,
+    handleVerifySketch,
+    handleUploadSketch,
   };
 }

@@ -5,13 +5,6 @@ import { streamSSE } from 'hono/streaming'
 import chokidar from 'chokidar'
 import type { FileEntry, SketchInfo } from './types'
 
-// ============================================================================
-// Filesystem Helper Functions
-// ============================================================================
-
-/**
- * Recursively read directory contents
- */
 export async function readDirRecursive(dirPath: string): Promise<FileEntry[]> {
   const entries = await readdir(dirPath, { withFileTypes: true })
   const files: FileEntry[] = await Promise.all(
@@ -47,13 +40,6 @@ export async function readDirRecursive(dirPath: string): Promise<FileEntry[]> {
   return files
 }
 
-// ============================================================================
-// Filesystem Route Handlers
-// ============================================================================
-
-/**
- * Register all filesystem-related routes
- */
 export function registerFilesystemRoutes(app: Hono) {
   // List directory contents
   app.get('/fs/list', async (c) => {
@@ -77,7 +63,6 @@ export function registerFilesystemRoutes(app: Hono) {
             lastModified: stats?.mtimeMs
           }
 
-          // Recursively read directories
           if (entry.isDirectory()) {
             try {
               const children = await readDirRecursive(entryPath)
@@ -91,7 +76,6 @@ export function registerFilesystemRoutes(app: Hono) {
         })
       )
 
-      // Sort: directories first, then alphabetically
       files.sort((a, b) => {
         if (a.type !== b.type) return a.type === 'directory' ? -1 : 1
         return a.name.localeCompare(b.name)

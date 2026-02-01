@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, StopCircle } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ export function AIChatPanel() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const handleToolCallRef = useRef<((toolCall: ToolCall) => Promise<void>) | null>(null);
 
-  const { messages, sendMessage, addToolOutput, status, setMessages } = useChat({
+  const { messages, sendMessage, addToolOutput, status, setMessages, stop } = useChat({
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     async onToolCall({ toolCall }) {
       if (handleToolCallRef.current) {
@@ -102,9 +102,8 @@ export function AIChatPanel() {
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b shrink-0">
-        <span className="text-sm font-medium">AI Assistant</span>
+        <span className="text-sm font-medium">Gemini</span>
         <Button
           variant="ghost"
           size="icon"
@@ -157,6 +156,7 @@ export function AIChatPanel() {
           onMentionedFilesChange={setMentionedFiles}
           onSend={handleSend}
           disabled={isLoading}
+          stop={stop}
           fileTree={fileTree}
         />
       </div>

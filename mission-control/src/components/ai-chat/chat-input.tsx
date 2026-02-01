@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, KeyboardEvent } from "react";
-import { Send, X, FileText } from "lucide-react";
+import { Send, StopCircle, X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ interface ChatInputProps {
   onMentionedFilesChange: (files: MentionedFile[]) => void;
   onSend: (message: string) => void;
   disabled?: boolean;
+  stop?: () => void;
   fileTree: FileEntry[] | null;
 }
 
@@ -23,6 +24,7 @@ export function ChatInput({
   mentionedFiles,
   onMentionedFilesChange,
   onSend,
+  stop,
   disabled = false,
   fileTree,
 }: ChatInputProps) {
@@ -36,17 +38,12 @@ export function ChatInput({
     const value = e.target.value;
     const cursorPos = e.target.selectionStart;
     setInputValue(value);
-
-    // Check for @ mention trigger
     const textBeforeCursor = value.slice(0, cursorPos);
     const lastAtIndex = textBeforeCursor.lastIndexOf("@");
-
     if (lastAtIndex !== -1) {
-      // Check if @ is at start or preceded by whitespace
       const charBeforeAt = lastAtIndex > 0 ? value[lastAtIndex - 1] : " ";
       if (charBeforeAt === " " || charBeforeAt === "\n" || lastAtIndex === 0) {
         const query = textBeforeCursor.slice(lastAtIndex + 1);
-        // Only show popover if there's no space after @
         if (!query.includes(" ") && !query.includes("\n")) {
           setMentionQuery(query);
           setMentionStartPos(lastAtIndex);
@@ -63,9 +60,7 @@ export function ChatInput({
 
   const handleFileSelect = useCallback(
     (file: MentionedFile) => {
-      // Check if already mentioned
       if (mentionedFiles.some((f) => f.path === file.path)) {
-        // Just close popover and remove the @query
         if (mentionStartPos !== null) {
           const before = inputValue.slice(0, mentionStartPos);
           const after = inputValue.slice(
@@ -79,11 +74,7 @@ export function ChatInput({
         textareaRef.current?.focus();
         return;
       }
-
-      // Add file to mentions
       onMentionedFilesChange([...mentionedFiles, file]);
-
-      // Remove @query from input
       if (mentionStartPos !== null) {
         const before = inputValue.slice(0, mentionStartPos);
         const after = inputValue.slice(
@@ -116,14 +107,11 @@ export function ChatInput({
   const handleSend = useCallback(() => {
     const trimmedMessage = inputValue.trim();
     if (!trimmedMessage && mentionedFiles.length === 0) return;
-
     onSend(trimmedMessage);
     setInputValue("");
-    // Don't clear mentioned files - they persist for context
   }, [inputValue, mentionedFiles.length, onSend]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Don't handle if mention popover is open (it handles its own keys)
     if (showMentionPopover) {
       if (
         e.key === "ArrowUp" ||
@@ -131,19 +119,14 @@ export function ChatInput({
         e.key === "Enter" ||
         e.key === "Escape"
       ) {
-        // Let the popover handle these
         return;
       }
     }
-
-    // Ctrl+Enter or Cmd+Enter to send
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSend();
       return;
     }
-
-    // Plain Enter to send (if not shift+enter for newline)
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -159,7 +142,6 @@ export function ChatInput({
 
   return (
     <div className="flex flex-col gap-2 p-3 border-t bg-background">
-      {/* File chips */}
       {mentionedFiles.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {mentionedFiles.map((file) => (
@@ -181,8 +163,6 @@ export function ChatInput({
           ))}
         </div>
       )}
-
-      {/* Input row */}
       <div className="flex gap-2">
         <div className="relative flex-1">
           <textarea
@@ -210,8 +190,6 @@ export function ChatInput({
               target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
             }}
           />
-
-          {/* Mention popover */}
           {showMentionPopover && (
             <FileMentionPopover
               query={mentionQuery}
@@ -222,17 +200,25 @@ export function ChatInput({
           )}
         </div>
 
-        <Button
-          size="icon"
-          onClick={handleSend}
-          disabled={disabled || (!inputValue.trim() && mentionedFiles.length === 0)}
-          className="shrink-0"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+        {disabled ? (
+          <Button
+            size="icon"
+            onClick={stop}
+            className="shrink-0"
+          >
+            <StopCircle className="h-6 w-6" />
+          </Button>
+        ) : (
+          <Button
+            size="icon"
+            onClick={handleSend}
+            disabled={disabled || (!inputValue.trim() && mentionedFiles.length === 0)}
+            className="shrink-0"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        )}
       </div>
-
-      {/* Keyboard hint */}
       <p className="text-[10px] text-muted-foreground">
         Enter to send, Shift+Enter for newline
       </p>

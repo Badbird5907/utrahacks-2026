@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { FileEntry } from "@/lib/daemon-client";
 
-// Text file extensions that can be mentioned
 const TEXT_EXTENSIONS = [
   '.ino', '.cpp', '.c', '.h', '.hpp', '.cc', '.cxx',
   '.txt', '.json', '.md', '.yaml', '.yml', '.xml',
@@ -36,7 +35,6 @@ function flattenFileTree(entries: FileEntry[]): FileEntry[] {
   function traverse(items: FileEntry[]) {
     for (const item of items) {
       if (item.type === 'file') {
-        // Check if it's a text file
         const ext = item.name.substring(item.name.lastIndexOf('.')).toLowerCase();
         if (TEXT_EXTENSIONS.includes(ext) || !item.name.includes('.')) {
           result.push(item);

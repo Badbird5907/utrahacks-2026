@@ -18,26 +18,10 @@ import {
   FileWatchSSEEvent 
 } from './daemon-client';
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const STORAGE_KEY = 'mission-control-project-path';
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-/**
- * Normalize a file path to use forward slashes consistently
- */
 function normalizePath(path: string): string {
   return path.replace(/\\/g, '/');
 }
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export interface OpenFile {
   path: string;
@@ -95,10 +79,6 @@ interface ProjectState {
   getPersistedPath: () => string | null;
 }
 
-// ============================================================================
-// Store
-// ============================================================================
-
 export const useProjectStore = create<ProjectState>((set, get) => ({
   // Initial state
   sketchPath: null,
@@ -111,10 +91,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   watcherAbortController: null,
   externalChanges: new Map(),
   pendingReloads: new Set(),
-
-  // ==========================================================================
-  // Project Operations
-  // ==========================================================================
 
   openProject: async (path: string) => {
     const client = getDaemonClient();
@@ -169,6 +145,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }
 
       return true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       set({ 
         isLoading: false, 
@@ -210,14 +187,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     try {
       const fileTree = await client.listDirectory(sketchPath);
       set({ fileTree });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Failed to refresh file tree:', error);
     }
   },
-
-  // ==========================================================================
-  // File Operations
-  // ==========================================================================
 
   openFile: async (inputPath: string) => {
     // Normalize path to use forward slashes consistently
@@ -255,6 +229,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           activeFilePath: path,
         };
       });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Failed to open file:', error);
       toast.error('Failed to open file', { description: error.message });
@@ -313,6 +288,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             : f
         ),
       }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Failed to save file:', error);
       toast.error('Failed to save file', { description: error.message });
@@ -329,10 +305,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  // ==========================================================================
-  // Create/Delete Operations
-  // ==========================================================================
-
   createFile: async (parentPath: string, name: string) => {
     const client = getDaemonClient();
     const fullPath = `${parentPath}/${name}`.replace(/\\/g, '/');
@@ -341,6 +313,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       await client.createEntry(fullPath, 'file');
       await get().refreshFileTree();
       await get().openFile(fullPath);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Failed to create file:', error);
       toast.error('Failed to create file', { description: error.message });
@@ -355,6 +328,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     try {
       await client.createEntry(fullPath, 'directory');
       await get().refreshFileTree();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Failed to create folder:', error);
       toast.error('Failed to create folder', { description: error.message });
@@ -381,6 +355,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }
       
       await get().refreshFileTree();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Failed to delete:', error);
       toast.error('Failed to delete', { description: error.message });
@@ -437,16 +412,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       });
       
       await get().refreshFileTree();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Failed to rename:', error);
       toast.error('Failed to rename', { description: error.message });
       throw error;
     }
   },
-
-  // ==========================================================================
-  // Helpers
-  // ==========================================================================
 
   hasUnsavedChanges: (path?: string) => {
     const { openFiles } = get();
@@ -550,10 +522,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 }));
 
-// ============================================================================
-// File Watcher Helper
-// ============================================================================
-
 async function startFileWatcher(
   path: string,
   signal: AbortSignal,
@@ -614,6 +582,7 @@ async function startFileWatcher(
           break;
       }
     }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     if (error.name !== 'AbortError') {
       console.error('File watcher failed:', error);

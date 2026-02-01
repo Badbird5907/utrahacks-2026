@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { FolderOpen, X, Check, Upload, MoreVertical, Sparkles, Terminal } from "lucide-react";
+import { FolderOpen, X, Check, Upload, MoreVertical, Sparkles, Terminal, ChevronDown } from "lucide-react";
 import { Editor } from "@/components/editor/index";
 import { FileTree, FileTreeHeader } from "@/components/file-tree";
 import { OpenProjectDialog } from "@/components/open-project-dialog";
@@ -41,21 +41,13 @@ export default function Home() {
   const [showOutputPanel, setShowOutputPanel] = useState(false);
   const [outputPanelTab, setOutputPanelTab] = useState<"output" | "serial">("output");
   const [showAIChat, setShowAIChat] = useState(false);
-  
-  // Dialog states for file/folder creation
   const [newFileDialogOpen, setNewFileDialogOpen] = useState(false);
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
   const [createParentPath, setCreateParentPath] = useState<string>("");
-  
-  // Delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<FileEntry | null>(null);
-
-  // Rename dialog
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [entryToRename, setEntryToRename] = useState<FileEntry | null>(null);
-
-  // Project state
   const sketchPath = useProjectStore((s) => s.sketchPath);
   const sketchInfo = useProjectStore((s) => s.sketchInfo);
   const fileTree = useProjectStore((s) => s.fileTree);
@@ -72,21 +64,15 @@ export default function Home() {
   const saveAllFiles = useProjectStore((s) => s.saveAllFiles);
   const hasUnsavedChanges = useProjectStore((s) => s.hasUnsavedChanges);
   const restoreFromStorage = useProjectStore((s) => s.restoreFromStorage);
-
-  // Editor state
   const notifyDocumentSaved = useEditorStore((s) => s.notifyDocumentSaved);
   const isLspConnected = useEditorStore((s) => s.isLspConnected);
   const isLspInitializing = useEditorStore((s) => s.isLspInitializing);
-
-  // Daemon/compile state
   const compileStatus = useDaemonStore((s) => s.compileStatus);
   const compileSketch = useDaemonStore((s) => s.compileSketch);
   const uploadSketch = useDaemonStore((s) => s.uploadSketch);
   const daemonStatus = useDaemonStore((s) => s.status);
   const isSerialMonitorRunning = useDaemonStore((s) => s.isSerialMonitorRunning);
   const serialStatus = useDaemonStore((s) => s.serialStatus);
-
-  // Restore project from localStorage on mount
   useEffect(() => {
     restoreFromStorage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -94,16 +80,12 @@ export default function Home() {
 
   // Track previous error to show toast only when error changes
   const prevErrorRef = useRef<string | null>(null);
-  
-  // Show toast when error occurs
   useEffect(() => {
     if (error && error !== prevErrorRef.current) {
       toast.error("Error", { description: error });
     }
     prevErrorRef.current = error;
   }, [error]);
-
-  // Handlers
   const handleSelectFile = useCallback(
     (entry: FileEntry) => {
       if (entry.type === "file") {
@@ -112,20 +94,14 @@ export default function Home() {
     },
     [openFile]
   );
-
-  // Request to create file - opens dialog
   const handleRequestCreateFile = useCallback((parentPath: string) => {
     setCreateParentPath(parentPath);
     setNewFileDialogOpen(true);
   }, []);
-
-  // Request to create folder - opens dialog
   const handleRequestCreateFolder = useCallback((parentPath: string) => {
     setCreateParentPath(parentPath);
     setNewFolderDialogOpen(true);
   }, []);
-
-  // Actually create the file
   const handleCreateFile = useCallback(
     async (fileName: string) => {
       if (createParentPath) {
@@ -134,8 +110,6 @@ export default function Home() {
     },
     [createParentPath, createFile]
   );
-
-  // Actually create the folder
   const handleCreateFolder = useCallback(
     async (folderName: string) => {
       if (createParentPath) {
@@ -144,28 +118,20 @@ export default function Home() {
     },
     [createParentPath, createFolder]
   );
-
-  // Request delete - opens confirmation dialog
   const handleRequestDelete = useCallback((entry: FileEntry) => {
     setEntryToDelete(entry);
     setDeleteDialogOpen(true);
   }, []);
-
-  // Actually delete the entry
   const handleConfirmDelete = useCallback(async () => {
     if (entryToDelete) {
       await deleteEntry(entryToDelete.path);
       setEntryToDelete(null);
     }
   }, [entryToDelete, deleteEntry]);
-
-  // Request rename - opens dialog
   const handleRequestRename = useCallback((entry: FileEntry) => {
     setEntryToRename(entry);
     setRenameDialogOpen(true);
   }, []);
-
-  // Actually rename the entry
   const handleConfirmRename = useCallback(
     async (newName: string) => {
       if (entryToRename) {
@@ -175,25 +141,19 @@ export default function Home() {
     },
     [entryToRename, renameEntry]
   );
-
-  // Header button handlers
   const handleNewFileAtRoot = useCallback(() => {
     if (sketchPath) {
       handleRequestCreateFile(sketchPath);
     }
   }, [sketchPath, handleRequestCreateFile]);
-
   const handleNewFolderAtRoot = useCallback(() => {
     if (sketchPath) {
       handleRequestCreateFolder(sketchPath);
     }
   }, [sketchPath, handleRequestCreateFolder]);
-
   const handleOpenProject = useCallback(() => {
     setIsOpenProjectDialogOpen(true);
   }, []);
-
-  // Compile the sketch
   const handleCompile = useCallback(async () => {
     if (!sketchPath) return;
     
@@ -208,8 +168,6 @@ export default function Home() {
     setShowOutputPanel(true);
     await compileSketch(sketchPath);
   }, [sketchPath, saveAllFiles, notifyDocumentSaved, compileSketch]);
-
-  // Compile and upload the sketch
   const handleUpload = useCallback(async () => {
     if (!sketchPath) return;
     
@@ -224,16 +182,12 @@ export default function Home() {
     setShowOutputPanel(true);
     await uploadSketch(sketchPath);
   }, [sketchPath, saveAllFiles, notifyDocumentSaved, uploadSketch]);
-
-  // Show output panel when compile starts
   useEffect(() => {
     if (compileStatus === "compiling") {
       setShowOutputPanel(true);
       setOutputPanelTab("output");
     }
   }, [compileStatus]);
-
-  // Handler to open serial monitor
   const handleOpenSerialMonitor = useCallback(() => {
     setShowOutputPanel(true);
     setOutputPanelTab("serial");
@@ -241,7 +195,6 @@ export default function Home() {
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
-      {/* Header */}
       <header className="flex items-center justify-between border-b border-border px-4 py-2 shrink-0">
         <div className="flex items-center gap-4">
           <h1 className="text-lg font-semibold">Mission Control</h1>
@@ -253,7 +206,6 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* LSP Status indicator */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground mr-4">
             <span
               className={`h-2 w-2 rounded-full ${
@@ -275,7 +227,6 @@ export default function Home() {
 
           {sketchPath && (
             <>
-              {/* Project dropdown menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -294,31 +245,42 @@ export default function Home() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Verify/Compile button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCompile}
-                disabled={compileStatus === "compiling" || daemonStatus !== "connected"}
-                title={daemonStatus !== "connected" ? "Daemon not connected" : "Verify/Compile sketch"}
-              >
-                <Check className="h-4 w-4 mr-2" />
-                {compileStatus === "compiling" ? "Compiling..." : "Verify"}
-              </Button>
+              <div className="flex">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleUpload}
+                  disabled={compileStatus === "compiling" || daemonStatus !== "connected"}
+                  title={daemonStatus !== "connected" ? "Daemon not connected" : "Compile and upload to board"}
+                  className="rounded-r-none"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {compileStatus === "compiling" ? "Building..." : "Compile & Upload"}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      disabled={compileStatus === "compiling" || daemonStatus !== "connected"}
+                      className="rounded-l-none border-l border-primary-foreground/20 px-2"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleCompile}>
+                      <Check className="h-4 w-4 mr-2" />
+                      Verify
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleUpload}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
 
-              {/* Upload button - compiles and uploads */}
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleUpload}
-                disabled={compileStatus === "compiling" || daemonStatus !== "connected"}
-                title={daemonStatus !== "connected" ? "Daemon not connected" : "Compile and upload to board"}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {compileStatus === "compiling" ? "Uploading..." : "Upload"}
-              </Button>
-
-              {/* Serial Monitor button */}
               <Button
                 variant={isSerialMonitorRunning ? "secondary" : "outline"}
                 size="sm"
@@ -337,7 +299,6 @@ export default function Home() {
                 )}
               </Button>
 
-              {/* AI Chat toggle button */}
               <div className="w-px h-6 bg-border mx-1" />
               <Button
                 variant={showAIChat ? "secondary" : "outline"}
@@ -377,9 +338,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main content */}
       <ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0">
-        {/* Sidebar - File tree */}
         {sketchPath && fileTree && (
           <>
             <ResizablePanel
@@ -416,10 +375,8 @@ export default function Home() {
           </>
         )}
 
-        {/* Editor and Output area */}
         <ResizablePanel defaultSize={showAIChat ? "60%" : "80%"} minSize="30%">
           <ResizablePanelGroup orientation="vertical">
-            {/* Editor */}
             <ResizablePanel defaultSize={showOutputPanel ? "70%" : "100%"} minSize="30%">
               <div className="h-full overflow-hidden">
                 {isLoading ? (
@@ -432,7 +389,6 @@ export default function Home() {
               </div>
             </ResizablePanel>
 
-            {/* Compile Output Panel */}
             {showOutputPanel && (
               <>
                 <ResizableHandle orientation="vertical" />
@@ -448,7 +404,6 @@ export default function Home() {
           </ResizablePanelGroup>
         </ResizablePanel>
 
-        {/* AI Chat Panel */}
         {showAIChat && (
           <>
             <ResizableHandle />
@@ -459,7 +414,6 @@ export default function Home() {
         )}
       </ResizablePanelGroup>
 
-      {/* Status bar */}
       <footer className="flex items-center justify-between border-t border-border px-4 py-1 text-xs text-muted-foreground shrink-0">
         <div className="flex items-center gap-4">
           {sketchPath && (
@@ -478,7 +432,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* New File Dialog */}
       <InputDialog
         open={newFileDialogOpen}
         onOpenChange={setNewFileDialogOpen}
@@ -490,7 +443,6 @@ export default function Home() {
         onSubmit={handleCreateFile}
       />
 
-      {/* New Folder Dialog */}
       <InputDialog
         open={newFolderDialogOpen}
         onOpenChange={setNewFolderDialogOpen}
@@ -502,7 +454,6 @@ export default function Home() {
         onSubmit={handleCreateFolder}
       />
 
-      {/* Rename Dialog */}
       <InputDialog
         open={renameDialogOpen}
         onOpenChange={setRenameDialogOpen}
@@ -515,7 +466,6 @@ export default function Home() {
         onSubmit={handleConfirmRename}
       />
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

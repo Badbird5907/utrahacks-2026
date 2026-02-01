@@ -1,15 +1,4 @@
-/**
- * Daemon Client Library
- * 
- * Connects to the local daemon service running on port 8152
- * Provides methods for checking status, managing serial ports, and uploading firmware
- */
-
 const DAEMON_BASE_URL = process.env.NEXT_PUBLIC_DAEMON_URL || 'http://localhost:8152';
-
-// ============================================================================
-// Type Definitions
-// ============================================================================
 
 export interface DaemonStatus {
   version: number;
@@ -30,7 +19,6 @@ export interface SerialPortsResponse {
   ports: SerialPortInfo[];
 }
 
-// SSE Event types for /upload
 export type UploadSSEEvent =
   | { event: 'start'; data: { message: string; filePath: string } }
   | { event: 'stdout'; data: { data: string } }
@@ -39,7 +27,6 @@ export type UploadSSEEvent =
   | { event: 'error'; data: { message: string; exitCode?: number } }
   | { event: 'done'; data: { message: string } };
 
-// SSE Event types for /compile
 export type CompileSSEEvent =
   | { event: 'start'; data: { message: string; sketchPath: string; fqbn: string } }
   | { event: 'stdout'; data: { data: string } }
@@ -48,7 +35,6 @@ export type CompileSSEEvent =
   | { event: 'error'; data: { message: string; exitCode?: number } }
   | { event: 'done'; data: { message: string } };
 
-// SSE Event types for /upload-sketch (compile & upload)
 export type UploadSketchSSEEvent =
   | { event: 'start'; data: { message: string; sketchPath: string; fqbn: string; port: string } }
   | { event: 'stdout'; data: { data: string } }
@@ -57,21 +43,18 @@ export type UploadSketchSSEEvent =
   | { event: 'error'; data: { message: string; exitCode?: number } }
   | { event: 'done'; data: { message: string } };
 
-// Compile request
 export interface CompileRequest {
   sketchPath: string;
   fqbn?: string;
   exportBinaries?: boolean;
 }
 
-// Upload sketch request (compile & upload)
 export interface UploadSketchRequest {
   sketchPath: string;
   fqbn?: string;
   port?: string;
 }
 
-// Board types
 export interface BoardInfo {
   name: string;
   fqbn: string;
@@ -88,7 +71,6 @@ export interface ConnectedBoard {
   matching_boards?: BoardInfo[];
 }
 
-// SSE Event types for /serial (legacy)
 export type SerialSSEEvent =
   | { event: 'start'; data: { message: string } }
   | { event: 'connected'; data: { message: string } }
@@ -96,7 +78,6 @@ export type SerialSSEEvent =
   | { event: 'error'; data: { message: string } }
   | { event: 'done'; data: { message: string } };
 
-// SSE Event types for /serial/monitor (new persistent connection)
 export type SerialMonitorSSEEvent =
   | { event: 'status'; data: SerialMonitorState }
   | { event: 'connected'; data: { port: string; baudRate: number } }
@@ -110,7 +91,6 @@ export type SerialMonitorSSEEvent =
   | { event: 'keepalive'; data: { timestamp: number } }
   | { event: 'error'; data: { message: string } };
 
-// Serial monitor state
 export type SerialMonitorStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export interface SerialMonitorState {
@@ -120,7 +100,6 @@ export interface SerialMonitorState {
   error: string | null;
 }
 
-// Filesystem types
 export interface FileEntry {
   name: string;
   path: string;
@@ -150,7 +129,6 @@ export interface FileWriteResult {
   lastModified: number;
 }
 
-// SSE Event types for /fs/watch
 export type FileWatchSSEEvent =
   | { event: 'ready'; data: { message: string } }
   | { event: 'add'; data: { path: string } }
@@ -159,10 +137,6 @@ export type FileWatchSSEEvent =
   | { event: 'addDir'; data: { path: string } }
   | { event: 'deleteDir'; data: { path: string } }
   | { event: 'error'; data: { message: string } };
-
-// ============================================================================
-// SSE Stream Parser
-// ============================================================================
 
 async function* parseSSEStream<T extends { event: string; data: unknown }>(
   response: Response,
@@ -217,10 +191,6 @@ async function* parseSSEStream<T extends { event: string; data: unknown }>(
     reader.releaseLock();
   }
 }
-
-// ============================================================================
-// Daemon Client Class
-// ============================================================================
 
 export class DaemonClient {
   private baseUrl: string;
@@ -319,13 +289,6 @@ export class DaemonClient {
     yield* parseSSEStream<SerialSSEEvent>(response, signal);
   }
 
-  // ==========================================================================
-  // Serial Monitor Methods (Persistent Connection)
-  // ==========================================================================
-
-  /**
-   * Get serial monitor status
-   */
   async getSerialMonitorStatus(): Promise<SerialMonitorState> {
     const response = await fetch(`${this.baseUrl}/serial/status`, {
       method: 'GET',
@@ -445,14 +408,6 @@ export class DaemonClient {
     yield* parseSSEStream<SerialMonitorSSEEvent>(response, signal);
   }
 
-  // ==========================================================================
-  // Compile Methods
-  // ==========================================================================
-
-  /**
-   * Compile an Arduino sketch
-   * Returns an async generator that yields SSE events
-   */
   async *compileSketch(
     request: CompileRequest,
     signal?: AbortSignal
@@ -533,13 +488,6 @@ export class DaemonClient {
     return response.json();
   }
 
-  // ==========================================================================
-  // Filesystem Methods
-  // ==========================================================================
-
-  /**
-   * List directory contents recursively
-   */
   async listDirectory(path: string): Promise<FileEntry[]> {
     const params = new URLSearchParams({ path });
     const response = await fetch(`${this.baseUrl}/fs/list?${params}`, {
@@ -699,10 +647,6 @@ export class DaemonClient {
     return `${wsBase}/lsp${params}`;
   }
 }
-
-// ============================================================================
-// Singleton Instance
-// ============================================================================
 
 let daemonClientInstance: DaemonClient | null = null;
 

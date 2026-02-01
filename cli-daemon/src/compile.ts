@@ -2,10 +2,6 @@ import { Hono } from 'hono'
 import { spawn } from 'child_process'
 import { streamSSE } from 'hono/streaming'
 
-// ============================================================================
-// Arduino Compile Route Handler
-// ============================================================================
-
 export interface CompileRequest {
   sketchPath: string
   fqbn?: string
@@ -78,7 +74,6 @@ export function registerCompileRoute(app: Hono) {
           })
         })
 
-        // Build arduino-cli compile arguments
         const args = [
           'compile',
           '--fqbn', fqbn,
@@ -86,19 +81,16 @@ export function registerCompileRoute(app: Hono) {
           '--verbose'
         ]
 
-        // Export binaries to sketch folder if requested
         if (exportBinaries) {
           args.push('--export-binaries')
         }
 
-        // Add sketch path last
         args.push(sketchPath)
 
         console.log(`Executing: ${arduinoCliPath} ${args.join(' ')}`)
 
         const proc = spawn(arduinoCliPath, args)
 
-        // Capture build output path from stdout
         let buildPath: string | undefined
         let outputPath: string | undefined
 
@@ -107,8 +99,6 @@ export function registerCompileRoute(app: Hono) {
           const output = data.toString()
           console.log('compile stdout:', output)
 
-          // Try to extract output file path from arduino-cli output
-          // Look for lines like "Sketch uses X bytes..." or output file paths
           const hexMatch = output.match(/([^\s]+\.hex)/i)
           const binMatch = output.match(/([^\s]+\.bin)/i)
           const elfMatch = output.match(/([^\s]+\.elf)/i)
@@ -117,7 +107,6 @@ export function registerCompileRoute(app: Hono) {
           else if (binMatch) outputPath = binMatch[1]
           else if (elfMatch) outputPath = elfMatch[1]
 
-          // Look for build path
           const buildPathMatch = output.match(/Build path:\s*(.+)/i)
           if (buildPathMatch) buildPath = buildPathMatch[1].trim()
 
@@ -252,20 +241,16 @@ export function registerCompileRoute(app: Hono) {
           })
         })
 
-        // Build arduino-cli upload arguments
-        // arduino-cli upload will compile if needed
         const args = [
           'upload',
           '--fqbn', fqbn,
           '--verbose'
         ]
 
-        // Add port if specified
         if (port) {
           args.push('--port', port)
         }
 
-        // Add sketch path last
         args.push(sketchPath)
 
         console.log(`Executing: ${arduinoCliPath} ${args.join(' ')}`)
@@ -352,7 +337,6 @@ export function registerCompileRoute(app: Hono) {
     })
   })
 
-  // GET /boards - List available boards
   app.get('/boards', async (c) => {
     const arduinoCliPath = process.env.ARDUINO_CLI_PATH
     if (!arduinoCliPath) {
@@ -393,7 +377,6 @@ export function registerCompileRoute(app: Hono) {
     }
   })
 
-  // GET /boards/connected - List connected boards
   app.get('/boards/connected', async (c) => {
     const arduinoCliPath = process.env.ARDUINO_CLI_PATH
     if (!arduinoCliPath) {

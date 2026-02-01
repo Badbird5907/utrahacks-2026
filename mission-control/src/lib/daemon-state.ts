@@ -3,20 +3,11 @@ import {
   DaemonClient,
   getDaemonClient,
   SerialPortInfo,
-  UploadSSEEvent,
-  CompileSSEEvent,
-  UploadSketchSSEEvent,
   CompileRequest,
   UploadSketchRequest,
   ConnectedBoard,
-  SerialMonitorSSEEvent,
   SerialMonitorStatus,
-  SerialMonitorState,
 } from "./daemon-client";
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export type DaemonConnectionStatus =
   | "checking"
@@ -92,10 +83,6 @@ interface DaemonState {
   setSerialBaudRate: (baudRate: number) => void;
 }
 
-// ============================================================================
-// Store
-// ============================================================================
-
 export const useDaemonStore = create<DaemonState>((set, get) => ({
   // Initial state
   status: "checking",
@@ -123,10 +110,6 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
   _compileAbort: null,
   _serialAbort: null,
 
-  /**
-   * Check if the daemon is running and update connection status
-   * Returns true if connected, false otherwise
-   */
   checkConnection: async () => {
     set({ status: "checking", error: null });
 
@@ -169,9 +152,6 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
     }
   },
 
-  /**
-   * Fetch available serial ports from the daemon
-   */
   fetchSerialPorts: async () => {
     const { _client, status } = get();
 
@@ -206,16 +186,10 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
     }
   },
 
-  /**
-   * Set the selected serial port
-   */
   setSelectedPort: (port: string | null) => {
     set({ selectedPort: port });
   },
 
-  /**
-   * Fetch connected boards with auto-detected FQBN
-   */
   fetchConnectedBoards: async () => {
     const { _client, status } = get();
 
@@ -242,17 +216,10 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
     }
   },
 
-  /**
-   * Set the selected FQBN (board type)
-   */
   setSelectedFqbn: (fqbn: string | null) => {
     set({ selectedFqbn: fqbn });
   },
 
-  /**
-   * Compile an Arduino sketch
-   * Streams progress via SSE and updates logs
-   */
   compileSketch: async (sketchPath: string, fqbn?: string) => {
     const { _client, status, selectedFqbn } = get();
 
@@ -368,9 +335,6 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
     }
   },
 
-  /**
-   * Cancel ongoing compilation
-   */
   cancelCompile: () => {
     const { _compileAbort } = get();
     if (_compileAbort) {
@@ -389,9 +353,6 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
     set({ compileLogs: [] });
   },
 
-  /**
-   * Reset compile status to idle
-   */
   resetCompileStatus: () => {
     set({
       compileStatus: "idle",
@@ -518,10 +479,6 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
     }
   },
 
-  /**
-   * Upload firmware file to the daemon
-   * Streams progress via SSE and updates logs
-   */
   uploadFirmware: async (file: File) => {
     const { _client, status } = get();
 
@@ -607,9 +564,6 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
     set({ uploadLogs: [] });
   },
 
-  /**
-   * Reset upload status to idle
-   */
   resetUploadStatus: () => {
     set({
       uploadStatus: "idle",
@@ -770,9 +724,6 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
     }
   },
 
-  /**
-   * Stop the serial monitor
-   */
   stopSerialMonitor: () => {
     const { _client, _serialAbort } = get();
 
@@ -812,9 +763,6 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
     await _client.sendSerialData(data);
   },
 
-  /**
-   * Clear serial logs
-   */
   clearSerialLogs: () => {
     const { _client } = get();
     
@@ -828,9 +776,6 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
     }
   },
 
-  /**
-   * Set serial baud rate (requires restart to take effect)
-   */
   setSerialBaudRate: (baudRate: number) => {
     set({ serialBaudRate: baudRate });
   },

@@ -136,7 +136,6 @@ export function DiffView({ oldContent, newContent, filePath, editId }: DiffViewP
 
   return (
     <div className="rounded-md border text-xs my-2 overflow-hidden bg-muted/30 min-w-0">
-      {/* Header */}
       <div className="flex items-center justify-between bg-muted/50 px-2 py-1 border-b gap-2 min-w-0">
         <button
           type="button"
@@ -173,7 +172,6 @@ export function DiffView({ oldContent, newContent, filePath, editId }: DiffViewP
         </div>
       </div>
 
-      {/* Diff lines */}
       {isExpanded && (
         <ScrollArea className="max-w-full">
           <pre className="p-2 text-xs font-mono leading-relaxed whitespace-pre-wrap break-words min-w-0">

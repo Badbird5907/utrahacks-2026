@@ -82,6 +82,24 @@ export function useToolHandlers({
     [getContext]
   );
 
+  const handleVerifySketch = useCallback(
+    async (toolCall: ToolCall) => {
+      if (!addToolOutputRef.current) return;
+      const handlers = createToolHandlers(getContext(), addToolOutputRef.current);
+      await handlers.handleVerifySketch(toolCall);
+    },
+    [getContext]
+  );
+
+  const handleUploadSketch = useCallback(
+    async (toolCall: ToolCall) => {
+      if (!addToolOutputRef.current) return;
+      const handlers = createToolHandlers(getContext(), addToolOutputRef.current);
+      await handlers.handleUploadSketch(toolCall);
+    },
+    [getContext]
+  );
+
   const handleToolCall = useCallback(
     async (toolCall: ToolCall) => {
       if ("dynamic" in toolCall && toolCall.dynamic) {
@@ -103,12 +121,16 @@ export function useToolHandlers({
           await handleListFiles(toolCall);
         } else if (toolName === "readSerialLogs") {
           await handleReadSerialLogs(toolCall);
+        } else if (toolName === "verifySketch") {
+          await handleVerifySketch(toolCall);
+        } else if (toolName === "uploadSketch") {
+          await handleUploadSketch(toolCall);
         }
       } catch (error) {
         console.error("Tool call failed:", toolName, error);
       }
     },
-    [handleEditFile, handleReadFile, handleListFiles, handleReadSerialLogs]
+    [handleEditFile, handleReadFile, handleListFiles, handleReadSerialLogs, handleVerifySketch, handleUploadSketch]
   );
 
   return { handleToolCall };

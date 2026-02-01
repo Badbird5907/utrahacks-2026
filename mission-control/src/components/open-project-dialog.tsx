@@ -58,6 +58,7 @@ export function OpenProjectDialog({
           description: storeError || "Unknown error" 
         });
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       toast.error("Failed to open project", { 
         description: err.message || "Unknown error" 

@@ -14,10 +14,6 @@ const MonacoEditor = dynamic(
 // Auto-save delay in milliseconds
 const AUTO_SAVE_DELAY = 1000;
 
-/**
- * Normalize a file path to use forward slashes consistently
- * Also normalizes Windows drive letters to uppercase for consistent comparison
- */
 function normalizePath(path: string): string {
   let normalized = path.replace(/\\/g, '/');
   // Normalize Windows drive letter to uppercase
@@ -27,9 +23,6 @@ function normalizePath(path: string): string {
   return normalized;
 }
 
-/**
- * Check if a file is supported by the Arduino LSP (C/C++/Arduino files)
- */
 function isLspSupportedFile(filePath: string): boolean {
   const ext = filePath.split('.').pop()?.toLowerCase();
   return ['ino', 'c', 'cpp', 'cc', 'cxx', 'h', 'hpp', 'hh', 'hxx'].includes(ext || '');

@@ -2,8 +2,7 @@
 
 /*
  * Copyright (c) Eric Traut
- * Wrapper interface around the monaco editor component. This class
- * handles language server interactions, the display of errors, etc.
+ * Wrapper interface around the monaco editor component.
  */
 
 import Editor, { loader } from "@monaco-editor/react";
@@ -27,7 +26,6 @@ import {
 import {
   CompletionItem,
   CompletionItemKind,
-  CompletionList,
   Diagnostic,
   DiagnosticSeverity,
   InsertReplaceEdit,
@@ -254,7 +252,7 @@ async function handleHoverRequest(
     return null;
   }
   try {
-    const hoverInfo = await (registered.lspClient as any).getHoverInfo(registered.filePath, {
+    const hoverInfo = await (registered.lspClient as unknown as LspClient<never>).getHoverInfo(registered.filePath, {
       line: position.lineNumber - 1,
       character: position.column - 1,
     });
@@ -268,8 +266,8 @@ async function handleHoverRequest(
     if (typeof hoverInfo.contents === 'string') {
       value = hoverInfo.contents;
     } else if (Array.isArray(hoverInfo.contents)) {
-      value = hoverInfo.contents.map((c: any) => 
-        typeof c === 'string' ? c : c.value || ''
+      value = hoverInfo.contents.map((c: unknown) => 
+        typeof c === 'string' ? c : (c as { value: string }).value || ''
       ).join('\n\n');
     } else if ((hoverInfo.contents as MarkupContent).value) {
       value = (hoverInfo.contents as MarkupContent).value;
@@ -300,7 +298,7 @@ async function handleRenameRequest(
   }
 
   try {
-    const renameEdits = await (registered.lspClient as any).getRenameEdits(
+    const renameEdits = await (registered.lspClient as unknown as LspClient<never>).getRenameEdits(
       registered.filePath,
       {
         line: position.lineNumber - 1,
@@ -344,7 +342,7 @@ async function handleSignatureHelpRequest(
   }
 
   try {
-    const sigInfo = await (registered.lspClient as any).getSignatureHelp(registered.filePath, {
+    const sigInfo = await (registered.lspClient as unknown as LspClient<never>).getSignatureHelp(registered.filePath, {
       line: position.lineNumber - 1,
       character: position.column - 1,
     });
@@ -385,7 +383,7 @@ async function handleProvideCompletionRequest(
   }
 
   try {
-    const completionResult = await (registered.lspClient as any).getCompletion(registered.filePath, {
+    const completionResult = await (registered.lspClient as unknown as LspClient<never>).getCompletion(registered.filePath, {
       line: position.lineNumber - 1,
       character: position.column - 1,
     });

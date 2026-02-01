@@ -40,6 +40,7 @@
     "clsx": "^2.1.1",
     "diff": "^8.0.3",
     "dotenv": "^17.2.3",
+    "katex": "^0.16.28",
     "lucide-react": "^0.563.0",
     "monaco-editor": "^0.55.1",
     "motion": "^12.29.2",

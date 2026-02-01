@@ -29,9 +29,6 @@ interface OpenDocument {
   content: string;
 }
 
-/**
- * Represents a text change with range information for incremental sync
- */
 interface TextChange {
   range: {
     start: Position;
@@ -40,9 +37,6 @@ interface TextChange {
   text: string;
 }
 
-/**
- * Convert a character offset to a Position (line, character)
- */
 function offsetToPosition(text: string, offset: number): Position {
   let line = 0;
   let character = 0;
@@ -59,13 +53,6 @@ function offsetToPosition(text: string, offset: number): Position {
   return { line, character };
 }
 
-/**
- * Compute incremental text changes between old and new content.
- * Returns an array of TextChange objects suitable for LSP didChange.
- * 
- * This uses a simple diff algorithm that finds the first and last
- * differing positions and creates a single change spanning that range.
- */
 function computeTextChanges(oldText: string, newText: string): TextChange[] {
   if (oldText === newText) {
     return [];
@@ -104,10 +91,6 @@ function computeTextChanges(oldText: string, newText: string): TextChange[] {
   }];
 }
 
-/**
- * Convert a file path to a file:// URI
- * Handles both Windows (C:\path) and Unix (/path) paths
- */
 function pathToUri(filePath: string): string {
   // Normalize path separators
   let normalized = filePath.replace(/\\/g, '/');
@@ -120,10 +103,6 @@ function pathToUri(filePath: string): string {
   return `file://${normalized}`;
 }
 
-/**
- * Normalize a file path to use forward slashes consistently
- * Also normalizes Windows drive letters to uppercase for consistent comparison
- */
 function normalizePath(filePath: string): string {
   let normalized = filePath.replace(/\\/g, '/');
   // Normalize Windows drive letter to uppercase
@@ -133,9 +112,6 @@ function normalizePath(filePath: string): string {
   return normalized;
 }
 
-/**
- * Get language ID from file extension
- */
 function getLanguageId(filePath: string): string {
   const ext = filePath.split('.').pop()?.toLowerCase();
   switch (ext) {
@@ -342,13 +318,6 @@ export class ArduinoLspClient extends LspClient<never> {
     this.ws.send(JSON.stringify(message));
   }
 
-  // ============================================================================
-  // Document Management (Multi-file)
-  // ============================================================================
-
-  /**
-   * Open a document in the LSP
-   */
   public openDocument(filePath: string, content: string): void {
     if (!this.initialized) {
       console.warn(`[LSP-${this.instanceId}] Cannot open document - not initialized`);
@@ -384,9 +353,6 @@ export class ArduinoLspClient extends LspClient<never> {
     });
   }
 
-  /**
-   * Close a document in the LSP
-   */
   public closeDocument(filePath: string): void {
     if (!this.initialized) return;
 
@@ -403,11 +369,6 @@ export class ArduinoLspClient extends LspClient<never> {
     this.openDocuments.delete(normalizedPath);
   }
 
-  /**
-   * Update document content using incremental sync.
-   * The Arduino Language Server requires incremental changes (with range),
-   * not full document replacement.
-   */
   public updateDocument(filePath: string, content: string): void {
     if (!this.initialized) {
       console.warn(`[LSP-${this.instanceId}] Cannot update document - not initialized`);
@@ -443,9 +404,6 @@ export class ArduinoLspClient extends LspClient<never> {
     });
   }
 
-  /**
-   * Notify LSP that a document was saved
-   */
   public notifyDocumentSaved(filePath: string): void {
     if (!this.initialized) return;
 
@@ -458,10 +416,6 @@ export class ArduinoLspClient extends LspClient<never> {
       text: doc.content,
     });
   }
-
-  // ============================================================================
-  // Legacy single-file methods (for compatibility)
-  // ============================================================================
 
   public updateCode(code: string): void {
     // Legacy method - no-op, use updateDocument instead
@@ -477,10 +431,6 @@ export class ArduinoLspClient extends LspClient<never> {
   public async updateSettings(): Promise<void> {
     // Arduino LSP may not need settings updates
   }
-
-  // ============================================================================
-  // LSP Feature Methods
-  // ============================================================================
 
   public async getHoverInfo(
     filePath: string,
@@ -621,10 +571,6 @@ export class ArduinoLspClient extends LspClient<never> {
     this.initialized = false;
     this.openDocuments.clear();
   }
-
-  // ============================================================================
-  // Getters
-  // ============================================================================
 
   public isInitialized(): boolean {
     return this.initialized;

@@ -2,10 +2,6 @@ import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { SerialPort } from 'serialport'
 
-// ============================================================================
-// Types
-// ============================================================================
-
 interface SSEClient {
   id: string
   send: (event: string, data: unknown) => Promise<void>
@@ -24,10 +20,6 @@ export interface SerialMonitorState {
   baudRate: number
   error: string | null
 }
-
-// ============================================================================
-// Serial Connection Manager (Singleton)
-// ============================================================================
 
 class SerialConnectionManager {
   private static instance: SerialConnectionManager | null = null
@@ -56,13 +48,6 @@ class SerialConnectionManager {
     return SerialConnectionManager.instance
   }
   
-  // ==========================================================================
-  // Public API
-  // ==========================================================================
-  
-  /**
-   * Start the serial monitor
-   */
   async start(port?: string, baudRate: number = 9600): Promise<void> {
     console.log(`[SerialManager] Starting serial monitor - port: ${port || 'auto'}, baudRate: ${baudRate}`)
     
@@ -70,7 +55,6 @@ class SerialConnectionManager {
     this.baudRate = baudRate
     this.targetPort = port || null
     
-    // If no port specified, try to auto-detect
     if (!this.targetPort) {
       const detectedPort = await this.autoDetectPort()
       if (detectedPort) {
@@ -88,9 +72,6 @@ class SerialConnectionManager {
     }
   }
   
-  /**
-   * Stop the serial monitor
-   */
   stop(): void {
     console.log('[SerialManager] Stopping serial monitor')
     this.isShuttingDown = true
@@ -110,9 +91,6 @@ class SerialConnectionManager {
     this.broadcastEvent('stopped', { message: 'Serial monitor stopped' })
   }
   
-  /**
-   * Send data to the Arduino
-   */
   async send(data: string): Promise<void> {
     if (!this.port || !this.port.isOpen) {
       throw new Error('Serial port is not connected')
@@ -133,50 +111,33 @@ class SerialConnectionManager {
     })
   }
   
-  /**
-   * Add a client to receive events
-   */
   addClient(client: SSEClient): void {
     console.log(`[SerialManager] Client connected: ${client.id}`)
     this.clients.set(client.id, client)
     
-    // Send current state to new client
     client.send('status', this.getState())
     
-    // Send recent logs
     const recentLogs = this.logBuffer.slice(-100)
     if (recentLogs.length > 0) {
       client.send('history', { logs: recentLogs.map(l => l.data) })
     }
   }
   
-  /**
-   * Remove a client
-   */
   removeClient(clientId: string): void {
     console.log(`[SerialManager] Client disconnected: ${clientId}`)
     this.clients.delete(clientId)
   }
   
-  /**
-   * Get buffered logs
-   */
   getLogs(limit: number = 50): string[] {
     const count = Math.min(limit, this.logBuffer.length)
     return this.logBuffer.slice(-count).map(l => l.data)
   }
   
-  /**
-   * Clear log buffer
-   */
   clearLogs(): void {
     this.logBuffer = []
     this.broadcastEvent('cleared', { message: 'Logs cleared' })
   }
   
-  /**
-   * Get current state
-   */
   getState(): SerialMonitorState {
     return {
       status: this.status,
@@ -186,16 +147,9 @@ class SerialConnectionManager {
     }
   }
   
-  /**
-   * Check if currently connected
-   */
   isConnected(): boolean {
     return this.status === 'connected' && this.port !== null && this.port.isOpen
   }
-  
-  // ==========================================================================
-  // Private Methods
-  // ==========================================================================
   
   private async connect(): Promise<void> {
     if (!this.targetPort) {
@@ -208,7 +162,6 @@ class SerialConnectionManager {
     this.broadcastEvent('status', this.getState())
     
     try {
-      // Close existing port if any
       if (this.port && this.port.isOpen) {
         this.port.close()
       }
@@ -221,7 +174,6 @@ class SerialConnectionManager {
         autoOpen: false,
       })
       
-      // Set up event handlers
       this.port.on('data', (data: Buffer) => {
         if (this.isShuttingDown) return
         
@@ -244,7 +196,6 @@ class SerialConnectionManager {
         }
       })
       
-      // Open the port
       await new Promise<void>((resolve, reject) => {
         this.port!.open((error) => {
           if (error) {
@@ -289,7 +240,6 @@ class SerialConnectionManager {
     this.broadcastEvent('disconnected', { reason })
     this.broadcastEvent('status', this.getState())
     
-    // Start reconnection attempts if not shutting down
     if (!this.isShuttingDown) {
       this.scheduleReconnect()
     }
@@ -305,7 +255,6 @@ class SerialConnectionManager {
       
       if (this.isShuttingDown) return
       
-      // Check if the target port is available
       if (this.targetPort) {
         const ports = await SerialPort.list()
         const available = ports.find(p => p.path === this.targetPort)
@@ -314,11 +263,9 @@ class SerialConnectionManager {
           this.broadcastEvent('reconnecting', { port: this.targetPort })
           await this.connect()
         } else {
-          // Port not available, keep polling
           this.startPolling()
         }
       } else {
-        // No target port, try auto-detect
         this.startPolling()
       }
     }, this.RECONNECT_DELAY)
@@ -367,17 +314,14 @@ class SerialConnectionManager {
       
       if (ports.length === 0) return null
       
-      // Priority 1: Arduino (vendorId 2341)
       let selected = ports.find(p => p.vendorId?.toLowerCase() === '2341')
       
-      // Priority 2: USB device (not Bluetooth)
       if (!selected) {
         selected = ports.find(p => 
           p.pnpId && p.pnpId.includes('USB') && !p.pnpId.includes('BTHENUM')
         )
       }
       
-      // Priority 3: Any device with vendor/product ID
       if (!selected) {
         selected = ports.find(p => p.vendorId && p.productId)
       }
@@ -415,19 +359,9 @@ class SerialConnectionManager {
   }
 }
 
-// ============================================================================
-// Serial Port Route Handlers
-// ============================================================================
-
-/**
- * Register all serial port routes
- */
 export function registerSerialRoutes(app: Hono) {
   const manager = SerialConnectionManager.getInstance()
   
-  // --------------------------------------------------------------------------
-  // List available serial ports
-  // --------------------------------------------------------------------------
   app.get('/serial/ports', async (c) => {
     try {
       const ports = await SerialPort.list()
@@ -456,9 +390,6 @@ export function registerSerialRoutes(app: Hono) {
     return c.json(manager.getState())
   })
   
-  // --------------------------------------------------------------------------
-  // Start serial monitor
-  // --------------------------------------------------------------------------
   app.post('/serial/start', async (c) => {
     try {
       const body = await c.req.json().catch(() => ({}))
@@ -483,9 +414,6 @@ export function registerSerialRoutes(app: Hono) {
     return c.json({ success: true })
   })
   
-  // --------------------------------------------------------------------------
-  // Send data to Arduino
-  // --------------------------------------------------------------------------
   app.post('/serial/send', async (c) => {
     try {
       const body = await c.req.json()
@@ -513,9 +441,6 @@ export function registerSerialRoutes(app: Hono) {
     return c.json({ logs, count: logs.length })
   })
   
-  // --------------------------------------------------------------------------
-  // Clear logs
-  // --------------------------------------------------------------------------
   app.post('/serial/logs/clear', (c) => {
     manager.clearLogs()
     return c.json({ success: true })
@@ -548,11 +473,9 @@ export function registerSerialRoutes(app: Hono) {
       
       manager.addClient(client)
       
-      // Keep the connection alive
       while (!aborted) {
         await new Promise((resolve) => setTimeout(resolve, 1000))
         
-        // Send keepalive
         if (!aborted) {
           await stream.writeSSE({
             event: 'keepalive',
@@ -563,10 +486,6 @@ export function registerSerialRoutes(app: Hono) {
     })
   })
   
-  // --------------------------------------------------------------------------
-  // Legacy: Stream serial port data (SSE) - direct connection
-  // Kept for backwards compatibility
-  // --------------------------------------------------------------------------
   app.get('/serial', async (c) => {
     let port = c.req.query('port')
     const baudRate = parseInt(c.req.query('baudRate') || '9600')
