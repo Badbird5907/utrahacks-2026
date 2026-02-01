@@ -22,9 +22,10 @@ const ANSI = {
 interface CompileOutputPanelProps {
   onClose?: () => void;
   className?: string;
+  hideHeader?: boolean;
 }
 
-export function CompileOutputPanel({ onClose, className }: CompileOutputPanelProps) {
+export function CompileOutputPanel({ onClose, className, hideHeader }: CompileOutputPanelProps) {
   const compileStatus = useDaemonStore((s) => s.compileStatus);
   const compileLogs = useDaemonStore((s) => s.compileLogs);
   const compileError = useDaemonStore((s) => s.compileError);
@@ -137,46 +138,48 @@ export function CompileOutputPanel({ onClose, className }: CompileOutputPanelPro
 
   return (
     <div className={cn("flex flex-col bg-muted/30", className)}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-muted/50">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Output</span>
-          {statusIcon}
-          <span className="text-xs text-muted-foreground">{statusText}</span>
+      {/* Header - hidden when used inside OutputPanel */}
+      {!hideHeader && (
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-muted/50">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Output</span>
+            {statusIcon}
+            <span className="text-xs text-muted-foreground">{statusText}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {compileStatus === "compiling" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelCompile}
+                className="h-6 px-2 text-xs"
+              >
+                Cancel
+              </Button>
+            )}
+            {compileLogs.length > 0 && compileStatus !== "compiling" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearCompileLogs}
+                className="h-6 px-2 text-xs"
+              >
+                Clear
+              </Button>
+            )}
+            {onClose && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          {compileStatus === "compiling" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={cancelCompile}
-              className="h-6 px-2 text-xs"
-            >
-              Cancel
-            </Button>
-          )}
-          {compileLogs.length > 0 && compileStatus !== "compiling" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearCompileLogs}
-              className="h-6 px-2 text-xs"
-            >
-              Clear
-            </Button>
-          )}
-          {onClose && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-6 w-6 p-0"
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Terminal output */}
       <div ref={containerRef} className="flex-1 overflow-hidden p-1" />

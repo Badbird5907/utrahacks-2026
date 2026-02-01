@@ -73,6 +73,15 @@ export function useToolHandlers({
     [getContext]
   );
 
+  const handleReadSerialLogs = useCallback(
+    async (toolCall: ToolCall) => {
+      if (!addToolOutputRef.current) return;
+      const handlers = createToolHandlers(getContext(), addToolOutputRef.current);
+      await handlers.handleReadSerialLogs(toolCall);
+    },
+    [getContext]
+  );
+
   const handleToolCall = useCallback(
     async (toolCall: ToolCall) => {
       if ("dynamic" in toolCall && toolCall.dynamic) {
@@ -92,12 +101,14 @@ export function useToolHandlers({
           await handleReadFile(toolCall);
         } else if (toolName === "listFiles") {
           await handleListFiles(toolCall);
+        } else if (toolName === "readSerialLogs") {
+          await handleReadSerialLogs(toolCall);
         }
       } catch (error) {
         console.error("Tool call failed:", toolName, error);
       }
     },
-    [handleEditFile, handleReadFile, handleListFiles]
+    [handleEditFile, handleReadFile, handleListFiles, handleReadSerialLogs]
   );
 
   return { handleToolCall };

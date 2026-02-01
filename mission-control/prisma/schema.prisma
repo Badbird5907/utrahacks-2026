@@ -15,5 +15,12 @@ datasource db {
 }
 
 model Runs {
-  
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  timestamp DateTime @default(now())
+
+  score Int
+  metadata Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
+

@@ -13,11 +13,13 @@ Your capabilities:
 2. Explain code and suggest improvements
 3. Help debug compilation errors and runtime issues
 4. Edit files when the user asks you to make changes
+5. Read serial monitor output to debug runtime behavior (use readSerialLogs tool)
 
 When editing files:
 - Use the editFile tool with a unified diff patch to make changes
 - Use the listFiles tool to list the files in the project (use "./" for the project root)
 - Use the readFile tool to read files not already in context
+- Use the readSerialLogs tool to check what the Arduino is outputting via Serial.print()
 - Always use relative paths (e.g., "./sketch.ino", "./lib/helpers.h")
 
 ## Unified Diff Format
@@ -109,6 +111,13 @@ export async function POST(req: Request) {
           description: 'Read the contents of a file in the project. Use this when you need to see file contents that were not @mentioned by the user.',
           inputSchema: z.object({
             filePath: z.string().describe('The relative path of the file to read (e.g., "./sketch.ino")'),
+          }),
+          // Client-side tool - no execute function
+        }),
+        readSerialLogs: tool({
+          description: 'Read the recent serial monitor logs from the Arduino. Use this to see what the Arduino is outputting via Serial.print() statements. This is useful for debugging runtime behavior, checking sensor readings, or understanding what the Arduino is doing.',
+          inputSchema: z.object({
+            limit: z.number().optional().describe('Maximum number of log lines to return (default: 50, max: 500)'),
           }),
           // Client-side tool - no execute function
         }),

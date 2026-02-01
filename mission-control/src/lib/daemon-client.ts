@@ -88,13 +88,37 @@ export interface ConnectedBoard {
   matching_boards?: BoardInfo[];
 }
 
-// SSE Event types for /serial
+// SSE Event types for /serial (legacy)
 export type SerialSSEEvent =
   | { event: 'start'; data: { message: string } }
   | { event: 'connected'; data: { message: string } }
   | { event: 'data'; data: { data: string } }
   | { event: 'error'; data: { message: string } }
   | { event: 'done'; data: { message: string } };
+
+// SSE Event types for /serial/monitor (new persistent connection)
+export type SerialMonitorSSEEvent =
+  | { event: 'status'; data: SerialMonitorState }
+  | { event: 'connected'; data: { port: string; baudRate: number } }
+  | { event: 'disconnected'; data: { reason: string } }
+  | { event: 'reconnecting'; data: { port: string } }
+  | { event: 'data'; data: { data: string } }
+  | { event: 'sent'; data: { data: string } }
+  | { event: 'history'; data: { logs: string[] } }
+  | { event: 'cleared'; data: { message: string } }
+  | { event: 'stopped'; data: { message: string } }
+  | { event: 'keepalive'; data: { timestamp: number } }
+  | { event: 'error'; data: { message: string } };
+
+// Serial monitor state
+export type SerialMonitorStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
+
+export interface SerialMonitorState {
+  status: SerialMonitorStatus;
+  port: string | null;
+  baudRate: number;
+  error: string | null;
+}
 
 // Filesystem types
 export interface FileEntry {
@@ -267,7 +291,7 @@ export class DaemonClient {
   }
 
   /**
-   * Connect to serial port and stream data
+   * Connect to serial port and stream data (legacy)
    * Returns an async generator that yields SSE events
    * 
    * @param port - Serial port path (auto-detected if not provided)
@@ -293,6 +317,132 @@ export class DaemonClient {
     }
 
     yield* parseSSEStream<SerialSSEEvent>(response, signal);
+  }
+
+  // ==========================================================================
+  // Serial Monitor Methods (Persistent Connection)
+  // ==========================================================================
+
+  /**
+   * Get serial monitor status
+   */
+  async getSerialMonitorStatus(): Promise<SerialMonitorState> {
+    const response = await fetch(`${this.baseUrl}/serial/status`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get serial monitor status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Start the serial monitor
+   */
+  async startSerialMonitor(port?: string, baudRate: number = 9600): Promise<SerialMonitorState> {
+    const response = await fetch(`${this.baseUrl}/serial/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ port, baudRate }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Failed to start serial monitor: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.state;
+  }
+
+  /**
+   * Stop the serial monitor
+   */
+  async stopSerialMonitor(): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/serial/stop`, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Failed to stop serial monitor: ${response.status}`);
+    }
+  }
+
+  /**
+   * Send data to Arduino via serial
+   */
+  async sendSerialData(data: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/serial/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ data }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Failed to send serial data: ${response.status}`);
+    }
+  }
+
+  /**
+   * Get buffered serial logs
+   */
+  async getSerialLogs(limit: number = 50): Promise<{ logs: string[]; count: number }> {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    const response = await fetch(`${this.baseUrl}/serial/logs?${params}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get serial logs: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Clear serial logs
+   */
+  async clearSerialLogs(): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/serial/logs/clear`, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to clear serial logs: ${response.status}`);
+    }
+  }
+
+  /**
+   * Subscribe to serial monitor events (SSE stream)
+   * Returns an async generator that yields events
+   */
+  async *subscribeSerialMonitor(
+    signal?: AbortSignal
+  ): AsyncGenerator<SerialMonitorSSEEvent> {
+    const response = await fetch(`${this.baseUrl}/serial/monitor`, {
+      method: 'GET',
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to subscribe to serial monitor: ${response.status}`);
+    }
+
+    yield* parseSSEStream<SerialMonitorSSEEvent>(response, signal);
   }
 
   // ==========================================================================

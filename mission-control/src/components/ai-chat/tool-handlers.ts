@@ -183,9 +183,56 @@ ${contentPreview}
     }
   };
 
+  const handleReadSerialLogs = async (toolCall: ToolCall) => {
+    if (!addToolOutput) {
+      console.error("addToolOutput not available");
+      return;
+    }
+
+    const { limit = 50 } = toolCall.input as { limit?: number };
+    const clampedLimit = Math.min(Math.max(limit, 1), 500);
+
+    try {
+      const client = getDaemonClient();
+      const { logs, count } = await client.getSerialLogs(clampedLimit);
+
+      if (logs.length === 0) {
+        addToolOutput({
+          tool: "readSerialLogs",
+          toolCallId: toolCall.toolCallId,
+          output: {
+            message: "No serial logs available. The serial monitor may not be connected, or the Arduino hasn't sent any output yet.",
+            logs: "",
+            lineCount: 0,
+          },
+        });
+        return;
+      }
+
+      addToolOutput({
+        tool: "readSerialLogs",
+        toolCallId: toolCall.toolCallId,
+        output: {
+          logs: logs.join('\n'),
+          lineCount: count,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to read serial logs:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      addToolOutput({
+        tool: "readSerialLogs",
+        toolCallId: toolCall.toolCallId,
+        state: "output-error",
+        errorText: `Could not read serial logs: ${message}`,
+      });
+    }
+  };
+
   return {
     handleEditFile,
     handleReadFile,
     handleListFiles,
+    handleReadSerialLogs,
   };
 }

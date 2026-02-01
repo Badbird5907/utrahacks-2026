@@ -190,7 +190,7 @@ export function ChatInput({
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about your code... (@ to mention files)"
+            placeholder="Ask about your code..."
             disabled={disabled}
             rows={1}
             className={cn(

@@ -9,6 +9,9 @@ import {
   CompileRequest,
   UploadSketchRequest,
   ConnectedBoard,
+  SerialMonitorSSEEvent,
+  SerialMonitorStatus,
+  SerialMonitorState,
 } from "./daemon-client";
 
 // ============================================================================
@@ -23,6 +26,9 @@ export type DaemonConnectionStatus =
 
 export type UploadStatus = "idle" | "uploading" | "success" | "error";
 export type CompileStatus = "idle" | "compiling" | "success" | "error";
+
+// Re-export serial monitor types
+export type { SerialMonitorStatus, SerialMonitorState } from "./daemon-client";
 
 interface DaemonState {
   // Connection state
@@ -50,9 +56,18 @@ interface DaemonState {
   uploadLogs: string[];
   uploadError: string | null;
 
+  // Serial monitor state
+  serialStatus: SerialMonitorStatus;
+  serialLogs: string[];
+  serialError: string | null;
+  serialPort: string | null;
+  serialBaudRate: number;
+  isSerialMonitorRunning: boolean;
+
   // Internal
   _client: DaemonClient | null;
   _compileAbort: AbortController | null;
+  _serialAbort: AbortController | null;
 
   // Actions
   checkConnection: () => Promise<boolean>;
@@ -68,6 +83,13 @@ interface DaemonState {
   uploadFirmware: (file: File) => Promise<boolean>;
   clearUploadLogs: () => void;
   resetUploadStatus: () => void;
+
+  // Serial monitor actions
+  startSerialMonitor: (port?: string, baudRate?: number) => Promise<void>;
+  stopSerialMonitor: () => void;
+  sendSerialData: (data: string) => Promise<void>;
+  clearSerialLogs: () => void;
+  setSerialBaudRate: (baudRate: number) => void;
 }
 
 // ============================================================================
@@ -91,8 +113,15 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
   uploadStatus: "idle",
   uploadLogs: [],
   uploadError: null,
+  serialStatus: "idle",
+  serialLogs: [],
+  serialError: null,
+  serialPort: null,
+  serialBaudRate: 9600,
+  isSerialMonitorRunning: false,
   _client: null,
   _compileAbort: null,
+  _serialAbort: null,
 
   /**
    * Check if the daemon is running and update connection status
@@ -587,5 +616,222 @@ export const useDaemonStore = create<DaemonState>((set, get) => ({
       uploadLogs: [],
       uploadError: null,
     });
+  },
+
+  // ==========================================================================
+  // Serial Monitor Actions
+  // ==========================================================================
+
+  /**
+   * Start the serial monitor and subscribe to events
+   */
+  startSerialMonitor: async (port?: string, baudRate?: number) => {
+    const { _client, status, _serialAbort, serialBaudRate } = get();
+
+    if (status !== "connected" || !_client) {
+      set({
+        serialStatus: "error",
+        serialError: "Not connected to daemon",
+      });
+      return;
+    }
+
+    // Cancel any existing subscription
+    if (_serialAbort) {
+      _serialAbort.abort();
+    }
+
+    const abortController = new AbortController();
+    const targetBaudRate = baudRate ?? serialBaudRate;
+
+    set({
+      serialStatus: "connecting",
+      serialError: null,
+      serialBaudRate: targetBaudRate,
+      isSerialMonitorRunning: true,
+      _serialAbort: abortController,
+    });
+
+    try {
+      // Start the serial monitor on the daemon
+      await _client.startSerialMonitor(port, targetBaudRate);
+
+      // Subscribe to events
+      const addLog = (message: string) => {
+        set((state) => {
+          // Split by newlines and filter empty lines
+          const newLogs = message.split('\n').filter(line => line.trim());
+          if (newLogs.length === 0) return state;
+          
+          // Keep only last 1000 lines
+          const combined = [...state.serialLogs, ...newLogs];
+          const trimmed = combined.length > 1000 ? combined.slice(-1000) : combined;
+          return { serialLogs: trimmed };
+        });
+      };
+
+      for await (const event of _client.subscribeSerialMonitor(abortController.signal)) {
+        switch (event.event) {
+          case "status":
+            set({
+              serialStatus: event.data.status,
+              serialPort: event.data.port,
+              serialBaudRate: event.data.baudRate,
+              serialError: event.data.error,
+            });
+            break;
+
+          case "connected":
+            set({
+              serialStatus: "connected",
+              serialPort: event.data.port,
+              serialBaudRate: event.data.baudRate,
+              serialError: null,
+            });
+            addLog(`Connected to ${event.data.port} at ${event.data.baudRate} baud`);
+            break;
+
+          case "disconnected":
+            set({
+              serialStatus: "disconnected",
+              serialError: event.data.reason,
+            });
+            addLog(`Disconnected: ${event.data.reason}`);
+            break;
+
+          case "reconnecting":
+            set({ serialStatus: "connecting" });
+            addLog(`Reconnecting to ${event.data.port}...`);
+            break;
+
+          case "data":
+            addLog(event.data.data);
+            break;
+
+          case "sent":
+            // Sent data is already logged by daemon
+            break;
+
+          case "history":
+            // Received log history on connect
+            set((state) => ({
+              serialLogs: [...state.serialLogs, ...event.data.logs],
+            }));
+            break;
+
+          case "cleared":
+            set({ serialLogs: [] });
+            break;
+
+          case "stopped":
+            set({
+              serialStatus: "idle",
+              isSerialMonitorRunning: false,
+            });
+            break;
+
+          case "error":
+            set({
+              serialStatus: "error",
+              serialError: event.data.message,
+            });
+            addLog(`Error: ${event.data.message}`);
+            break;
+
+          case "keepalive":
+            // Ignore keepalive events
+            break;
+        }
+      }
+    } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+
+      const errorMessage =
+        err instanceof Error ? err.message : "Serial monitor failed";
+
+      set({
+        serialStatus: "error",
+        serialError: errorMessage,
+        isSerialMonitorRunning: false,
+        _serialAbort: null,
+      });
+
+      // Check if daemon disconnected
+      if (
+        errorMessage.includes("fetch") ||
+        errorMessage.includes("network") ||
+        errorMessage.includes("Failed to fetch")
+      ) {
+        set({ status: "disconnected", error: "Lost connection to daemon" });
+      }
+    }
+  },
+
+  /**
+   * Stop the serial monitor
+   */
+  stopSerialMonitor: () => {
+    const { _client, _serialAbort } = get();
+
+    // Abort the SSE subscription
+    if (_serialAbort) {
+      _serialAbort.abort();
+    }
+
+    // Tell daemon to stop
+    if (_client) {
+      _client.stopSerialMonitor().catch((err) => {
+        console.error("Failed to stop serial monitor:", err);
+      });
+    }
+
+    set({
+      serialStatus: "idle",
+      isSerialMonitorRunning: false,
+      _serialAbort: null,
+    });
+  },
+
+  /**
+   * Send data to Arduino via serial
+   */
+  sendSerialData: async (data: string) => {
+    const { _client, serialStatus } = get();
+
+    if (!_client) {
+      throw new Error("Not connected to daemon");
+    }
+
+    if (serialStatus !== "connected") {
+      throw new Error("Serial port not connected");
+    }
+
+    await _client.sendSerialData(data);
+  },
+
+  /**
+   * Clear serial logs
+   */
+  clearSerialLogs: () => {
+    const { _client } = get();
+    
+    set({ serialLogs: [] });
+    
+    // Also clear on daemon
+    if (_client) {
+      _client.clearSerialLogs().catch((err) => {
+        console.error("Failed to clear serial logs on daemon:", err);
+      });
+    }
+  },
+
+  /**
+   * Set serial baud rate (requires restart to take effect)
+   */
+  setSerialBaudRate: (baudRate: number) => {
+    set({ serialBaudRate: baudRate });
   },
 }));

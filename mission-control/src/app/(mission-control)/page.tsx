@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { FolderOpen, X, Check, Upload, MoreVertical, Sparkles } from "lucide-react";
+import { FolderOpen, X, Check, Upload, MoreVertical, Sparkles, Terminal } from "lucide-react";
 import { Editor } from "@/components/editor/index";
 import { FileTree, FileTreeHeader } from "@/components/file-tree";
 import { OpenProjectDialog } from "@/components/open-project-dialog";
 import { InputDialog } from "@/components/input-dialog";
-import { CompileOutputPanel } from "@/components/compile-output-panel";
+import { OutputPanel } from "@/components/output-panel";
 import { AIChatPanel } from "@/components/ai-chat/ai-chat-panel";
 import { useProjectStore } from "@/lib/project-state";
 import { useEditorStore } from "@/lib/state";
@@ -39,6 +39,7 @@ import type { FileEntry } from "@/lib/daemon-client";
 export default function Home() {
   const [isOpenProjectDialogOpen, setIsOpenProjectDialogOpen] = useState(false);
   const [showOutputPanel, setShowOutputPanel] = useState(false);
+  const [outputPanelTab, setOutputPanelTab] = useState<"output" | "serial">("output");
   const [showAIChat, setShowAIChat] = useState(false);
   
   // Dialog states for file/folder creation
@@ -82,6 +83,8 @@ export default function Home() {
   const compileSketch = useDaemonStore((s) => s.compileSketch);
   const uploadSketch = useDaemonStore((s) => s.uploadSketch);
   const daemonStatus = useDaemonStore((s) => s.status);
+  const isSerialMonitorRunning = useDaemonStore((s) => s.isSerialMonitorRunning);
+  const serialStatus = useDaemonStore((s) => s.serialStatus);
 
   // Restore project from localStorage on mount
   useEffect(() => {
@@ -226,8 +229,15 @@ export default function Home() {
   useEffect(() => {
     if (compileStatus === "compiling") {
       setShowOutputPanel(true);
+      setOutputPanelTab("output");
     }
   }, [compileStatus]);
+
+  // Handler to open serial monitor
+  const handleOpenSerialMonitor = useCallback(() => {
+    setShowOutputPanel(true);
+    setOutputPanelTab("serial");
+  }, []);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
@@ -306,6 +316,25 @@ export default function Home() {
               >
                 <Upload className="h-4 w-4 mr-2" />
                 {compileStatus === "compiling" ? "Uploading..." : "Upload"}
+              </Button>
+
+              {/* Serial Monitor button */}
+              <Button
+                variant={isSerialMonitorRunning ? "secondary" : "outline"}
+                size="sm"
+                onClick={handleOpenSerialMonitor}
+                disabled={daemonStatus !== "connected"}
+                title="Open Serial Monitor"
+              >
+                <Terminal className="h-4 w-4 mr-2" />
+                Serial
+                {isSerialMonitorRunning && (
+                  <span className={`ml-2 h-2 w-2 rounded-full ${
+                    serialStatus === "connected" ? "bg-green-500" :
+                    serialStatus === "connecting" || serialStatus === "disconnected" ? "bg-yellow-500 animate-pulse" :
+                    "bg-gray-400"
+                  }`} />
+                )}
               </Button>
 
               {/* AI Chat toggle button */}
@@ -408,8 +437,9 @@ export default function Home() {
               <>
                 <ResizableHandle orientation="vertical" />
                 <ResizablePanel defaultSize="30%" minSize="10%" maxSize="60%">
-                  <CompileOutputPanel
+                  <OutputPanel
                     className="h-full"
+                    defaultTab={outputPanelTab}
                     onClose={() => setShowOutputPanel(false)}
                   />
                 </ResizablePanel>
