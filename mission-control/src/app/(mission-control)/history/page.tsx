@@ -272,7 +272,12 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatDuration("2000-01-01T00:00:00", new Date(stats.fastestTime).toISOString())}
+                  {(() => {
+                    const totalSeconds = Math.floor(stats.fastestTime / 1000);
+                    const minutes = Math.floor(totalSeconds / 60);
+                    const seconds = totalSeconds % 60;
+                    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+                  })()}
                 </div>
               </CardContent>
             </Card>

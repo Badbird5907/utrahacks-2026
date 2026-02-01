@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { insertRun as insertRunToSnowflake, isConfigured as isSnowflakeConfigured } from "@/lib/snowflake";
-import { mintRunNFT, isConfigured as isSolanaConfigured, type RunData } from "@/lib/solana";
-import { headers } from "next/headers";
 
 const CreateRunSchema = z.object({
   startTimestamp: z.string().datetime(),
@@ -126,48 +124,6 @@ export async function POST(req: Request): Promise<Response> {
         // Log but don't fail - Snowflake insert is best-effort
         console.error("[Snowflake] Background insert failed:", err);
       });
-    }
-
-    // Push to Solana asynchronously (fire-and-forget)
-    // Mints the run as an NFT on Devnet
-    if (isSolanaConfigured()) {
-      (async () => {
-        try {
-          // Build metadata URI
-          const headersList = await headers();
-          const host = headersList.get("host") || "localhost:4667";
-          const protocol = headersList.get("x-forwarded-proto") || "http";
-          const metadataUri = `${protocol}://${host}/api/solana/metadata/${run.id}`;
-
-          const runData: RunData = {
-            id: run.id,
-            number: run.number,
-            startTimestamp: run.startTimestamp,
-            endTimestamp: run.endTimestamp,
-            score: run.score,
-            codeHash: run.codeHash,
-            notes: run.notes,
-            sectionsAttempted: run.sectionsAttempted,
-            returnedToStart: run.returnedToStart,
-            createdAt: run.createdAt,
-          };
-
-          const result = await mintRunNFT(runData, metadataUri);
-
-          if (result.success && result.mintAddress) {
-            // Update the run with the mint address
-            await prisma.runs.update({
-              where: { id: run.id },
-              data: { solanaMintAddress: result.mintAddress },
-            });
-            console.log(`[Solana] Minted NFT for Run #${run.number}: ${result.mintAddress}`);
-          } else {
-            console.error(`[Solana] Failed to mint NFT for Run #${run.number}:`, result.error);
-          }
-        } catch (err) {
-          console.error("[Solana] Background mint failed:", err);
-        }
-      })();
     }
 
     return Response.json({ success: true, data: run });
