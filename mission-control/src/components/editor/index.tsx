@@ -27,6 +27,14 @@ function normalizePath(path: string): string {
   return normalized;
 }
 
+/**
+ * Check if a file is supported by the Arduino LSP (C/C++/Arduino files)
+ */
+function isLspSupportedFile(filePath: string): boolean {
+  const ext = filePath.split('.').pop()?.toLowerCase();
+  return ['ino', 'c', 'cpp', 'cc', 'cxx', 'h', 'hpp', 'hh', 'hxx'].includes(ext || '');
+}
+
 interface EditorProps {
   onOpenProject?: () => void;
 }
@@ -83,13 +91,19 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
     };
   }, [sketchPath, initializeLsp, disconnectLsp]);
 
-  // Open document in LSP when file is opened
+  // Open document in LSP when file is opened (only for supported file types)
   useEffect(() => {
     console.log('[Editor] Document open effect - lspClient:', lspClient ? 'exists' : 'null', 
       'initialized:', lspClient?.isInitialized(), 
       'activeFilePath:', activeFilePath);
     
     if (!lspClient || !activeFilePath || !activeFile) return;
+
+    // Only open C/C++/Arduino files in LSP
+    if (!isLspSupportedFile(activeFilePath)) {
+      console.log('[Editor] Skipping LSP for non-C/C++ file:', activeFilePath);
+      return;
+    }
 
     // Check if LSP is actually initialized
     if (!lspClient.isInitialized()) {
@@ -119,7 +133,9 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
         // Check if file still has unsaved changes (user might have manually saved)
         if (hasUnsavedChanges(filePath)) {
           await saveFile(filePath);
-          notifyDocumentSaved(filePath);
+          if (isLspSupportedFile(filePath)) {
+            notifyDocumentSaved(filePath);
+          }
         }
       } catch (error) {
         console.error("Auto-save failed:", error);
@@ -136,8 +152,10 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
       // Update in project store (tracks unsaved changes)
       updateFileContent(activeFilePath, newCode);
 
-      // Update in LSP
-      updateDocument(activeFilePath, newCode);
+      // Update in LSP (only for supported file types)
+      if (isLspSupportedFile(activeFilePath)) {
+        updateDocument(activeFilePath, newCode);
+      }
 
       // Clear existing auto-save timer
       if (autoSaveTimerRef.current) {
@@ -170,24 +188,30 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
 
     try {
       await saveFile(activeFilePath);
-      notifyDocumentSaved(activeFilePath);
+      if (isLspSupportedFile(activeFilePath)) {
+        notifyDocumentSaved(activeFilePath);
+      }
     } catch (error) {
       console.error("Failed to save file:", error);
     }
   }, [activeFilePath, saveFile, notifyDocumentSaved]);
 
-  // Handle tab close - also close in LSP
+  // Handle tab close - also close in LSP for supported files
   const handleCloseTab = useCallback(
     (path: string) => {
       // Save before closing if there are unsaved changes
       if (hasUnsavedChanges(path)) {
         saveFile(path).then(() => {
-          notifyDocumentSaved(path);
+          if (isLspSupportedFile(path)) {
+            notifyDocumentSaved(path);
+          }
         }).catch(console.error);
       }
       
       closeFile(path);
-      closeDocument(path);
+      if (isLspSupportedFile(path)) {
+        closeDocument(path);
+      }
     },
     [closeFile, closeDocument, hasUnsavedChanges, saveFile, notifyDocumentSaved]
   );
@@ -216,10 +240,10 @@ export const Editor = ({ onOpenProject }: EditorProps) => {
       <div className="flex-1 min-h-0">
         {activeFile ? (
           <MonacoEditor
-            lspClient={lspClient ?? undefined}
+            lspClient={activeFilePath && isLspSupportedFile(activeFilePath) ? lspClient ?? undefined : undefined}
             filePath={activeFilePath!}
             code={activeFile.content}
-            diagnostics={activeDiagnostics}
+            diagnostics={activeFilePath && isLspSupportedFile(activeFilePath) ? activeDiagnostics : []}
             onUpdateCode={handleUpdateCode}
             onSave={handleSave}
           />
