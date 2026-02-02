@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Ultrasonic Spiral Art 🌀</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <title>Live Color Sensor NFT Generator</title>
     <style>
         body {
             margin: 0;
@@ -19,118 +19,171 @@
             height: 100vh;
             overflow: hidden;
         }
+
         h1 {
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             font-size: 1.5rem;
             color: #888;
         }
+
+        #progress {
+            font-size: 1.2rem;
+            color: #0ff;
+            margin-bottom: 10px;
+        }
+
         #canvas-container {
             position: relative;
             box-shadow: 0 0 50px rgba(0, 255, 255, 0.1);
             border-radius: 50%;
         }
+
         canvas {
             background-color: #0a0a14;
             border-radius: 50%;
             display: block;
         }
+
         #status {
             margin-top: 10px;
             font-size: 0.9rem;
             color: #555;
         }
+
+        #color-preview {
+            margin-top: 10px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+
+        #done-message {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        #done-message h2 {
+            color: #0ff;
+            margin: 0 0 10px 0;
+        }
+
+        #reset-btn {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #0ff;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
     </style>
 </head>
+
 <body>
-    <h1>🌀 Live Sensor Art</h1>
+    <h1>Live Color Sensor NFT Generator</h1>
+    <div id="progress">0 / 200 samples</div>
     <div id="canvas-container">
         <canvas id="artCanvas" width="800" height="800"></canvas>
     </div>
-    <div id="status">Waiting for data...</div>
+    <div id="color-preview"></div>
+    <div id="status">Waiting for sensor data...</div>
+
+    <div id="done-message">
+        <h2>NFT GENERATED!</h2>
+        <p>Check the terminal for ElevenLabs announcement</p>
+        <p>Art saved to: color_spiral_art.png</p>
+        <button id="reset-btn" onclick="resetArt()">Generate New NFT</button>
+    </div>
 
     <script>
-        const socket = io();
         const canvas = document.getElementById('artCanvas');
         const ctx = canvas.getContext('2d');
         const statusEl = document.getElementById('status');
-        
-        // Configuration
-        const MAX_POINTS = 300; // Reset after this many dots
+        const progressEl = document.getElementById('progress');
+        const colorPreview = document.getElementById('color-preview');
+        const doneMessage = document.getElementById('done-message');
+
+        const MAX_POINTS = 200;
         const CENTER_X = canvas.width / 2;
         const CENTER_Y = canvas.height / 2;
         const MAX_RADIUS = (Math.min(canvas.width, canvas.height) / 2) - 40;
-        
-        let count = 0;
-        let points = [];
 
-        // Clear initial canvas
+        let count = 0;
+        let lastCount = -1;
+
         ctx.fillStyle = "#0a0a14";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        socket.on('connect', () => {
-            statusEl.innerText = "Connected! Wave your hand 👋";
-        });
+        async function fetchData() {
+            try {
+                const response = await fetch('/data');
+                const data = await response.json();
 
-        socket.on('disconnect', () => {
-            statusEl.innerText = "Disconnected from server 🔌";
-        });
+                progressEl.innerText = `${data.count} / ${data.max} samples`;
 
-        socket.on('sensor_data', (data) => {
-            const dist = data.distance;
-            statusEl.innerText = `Data: ${dist}cm | Point: ${count}/${MAX_POINTS}`;
-            drawSpiralPoint(dist);
-        });
+                if (data.done) {
+                    doneMessage.style.display = 'block';
+                    statusEl.innerText = "NFT Generated!";
+                    return;
+                }
 
-        function drawSpiralPoint(dist) {
-            // Reset if full
-            if (count >= MAX_POINTS) {
-                // Fade out effect instead of hard clear?
-                // Let's do a hard clear for now to restart the spiral loop
-                ctx.fillStyle = "rgba(10, 10, 20, 0.9)"; // Slight transparency for trail? No, reset.
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                count = 0;
+                // Draw new point if count increased
+                if (data.count > lastCount && data.count <= MAX_POINTS) {
+                    lastCount = data.count;
+                    statusEl.innerText = `RGB: ${data.r}, ${data.g}, ${data.b}`;
+                    drawSpiralPoint(data.count - 1, data.r, data.g, data.b);
+                }
+            } catch (e) {
+                statusEl.innerText = "Connecting...";
             }
+        }
 
-            // Math identical to Python script
-            // t goes 0 -> 1
-            const t = count / MAX_POINTS;
-            
-            // Angle
-            const angle = count * 0.5;
-            
-            // Radius (Spiral Out)
+        function drawSpiralPoint(index, sensorR, sensorG, sensorB) {
+            const t = index / MAX_POINTS;
+            const angle = index * 0.8;  // More spread out
             const radius = 10 + (t * MAX_RADIUS);
-            
+
             const x = CENTER_X + Math.cos(angle) * radius;
             const y = CENTER_Y + Math.sin(angle) * radius;
 
-            // Visuals
-            // Size: Closer = Bigger
-            // Clamp dist 0-200
-            const safeDist = Math.max(0, Math.min(200, dist));
-            const size = Math.max(5, 50 - (safeDist / 4));
+            const rVal = Math.max(0, Math.min(255, 255 - (sensorR * 1.5)));
+            const gVal = Math.max(0, Math.min(255, 255 - (sensorG * 1.5)));
+            const bVal = Math.max(0, Math.min(255, 255 - (sensorB * 1.5)));
 
-            // Color
-            const r = Math.max(0, 255 - safeDist);
-            const g = Math.min(255, safeDist * 2);
-            const b = 200;
-            
-            const color = `rgb(${r}, ${g}, ${b})`;
+            const intensity = (sensorR + sensorG + sensorB) / 3;
+            const size = Math.max(3, 15 - (intensity / 10));  // Smaller circles
 
-            // Draw Circle
+            const color = `rgb(${rVal}, ${gVal}, ${bVal})`;
+            colorPreview.style.backgroundColor = color;
+
             ctx.beginPath();
             ctx.arc(x, y, size, 0, Math.PI * 2);
             ctx.fillStyle = color;
-            ctx.fill();
-            
-            // Add a glow
             ctx.shadowBlur = 15;
             ctx.shadowColor = color;
             ctx.fill();
-            ctx.shadowBlur = 0; // Reset
-
-            count++;
+            ctx.shadowBlur = 0;
         }
+
+        async function resetArt() {
+            await fetch('/reset');
+            ctx.fillStyle = "#0a0a14";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            lastCount = -1;
+            doneMessage.style.display = 'none';
+            statusEl.innerText = "Waiting for sensor data...";
+        }
+
+        setInterval(fetchData, 100);
+        fetchData();
     </script>
 </body>
+
 </html>
